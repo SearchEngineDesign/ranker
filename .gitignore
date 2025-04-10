@@ -1,0 +1,83 @@
+# Byte-compiled Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+env/
+venv/
+ENV/
+.venv/
+*.env
+
+# Python eggs and packaging
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+wheels/
+
+# Python cache
+*.cache
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Logs and debugging files
+*.log
+*.bak
+
+# Unit test and coverage reports
+htmlcov/
+.tox/
+.coverage
+*.cover
+*.py,cover
+
+# C++ build files
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+*.lo
+*.slo
+*.lai
+*.mod
+
+# IDE-specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.DS_Store
+
+# C++ generated files
+Makefile
+CMakeFiles/
+cmake_install.cmake
+build/
+*.out
+*.gch
+*.d
+*.gcno
+*.gcda
+
+# Debugging and profiling files
+*.prof
+*.core
+*.pdb
+
+# Temporary files
+*.tmp
+*.temp
+*.~*
+*.log
+
+# System files
+Thumbs.db
+.DS_Store
+desktop.ini
