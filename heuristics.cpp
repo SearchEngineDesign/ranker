@@ -1,6 +1,6 @@
 #include "heuristics.h"
 
-size_t DynamicRanker::distance( Location loc1, Location loc2 )
+size_t Ranker::distance( Location loc1, Location loc2 )
    {
    return ( loc1 > loc2 ) ? 
       ( loc1 - loc2 ) : 
@@ -8,7 +8,7 @@ size_t DynamicRanker::distance( Location loc1, Location loc2 )
    }
 
 
-void DynamicRanker::rarestWord( )
+void Ranker::rarestWord( )
    {
    // find locations of matching doc
    docEnd = endDoc->GetStartLocation( );  
@@ -47,7 +47,7 @@ void DynamicRanker::rarestWord( )
    }   
 
 
-void DynamicRanker::forward( )
+void Ranker::forward( )
    {
    ISRWord *tmpRarestISR = words[ rarest ];  
    vector< Location > spanLocations( numWords );  // locations of words in a span
@@ -130,7 +130,7 @@ void DynamicRanker::forward( )
    }
 
 
-int DynamicRanker::score( )
+int Ranker::dynamicScore( )
    {
    return numShortSpan * shortSpanWeight + 
       numInOrderSpan * inOrderSpanWeight + 
@@ -140,9 +140,23 @@ int DynamicRanker::score( )
    }
 
 
-int DynamicRanker::dynamicRankingScore(  )
+int Ranker::staticScore( )
+   {
+   int isShortTitle, isNiceDocLength, isShortUrl = 0;  
+
+   isShortTitle = endDoc->GetTitleLength( ) <= MaxShortTitle ? 1 : 0;  
+   isNiceDocLength = ( endDoc->GetDocumentLength( ) >= MinNiceDocLength && endDoc->GetDocumentLength( ) <= MaxNiceDocLength ) ? 1 : 0;  
+   isShortUrl = ( endDoc->GetUrlLength( ) <= MaxShortUrl ) ? 1 : 0;  
+
+   return isShortTitle * shortTitleWeight + 
+      isNiceDocLength * docLengthWeight + 
+      isShortUrl * shortUrlWeight;  
+   }
+
+
+int Ranker::dynamicRankingScore(  )
    {
    rarestWord( );  
    forward( );  
-   return score( );  
+   return dynamicScore( );  
    }

@@ -2,7 +2,7 @@
 #include "../isr/isrHandler.h"
 #include <climits>
 
-class DynamicRanker 
+class Ranker 
 {
 public:
    
@@ -14,7 +14,8 @@ public:
 
    void forward( );  // one pass of isrs; count heuristics
 
-   int score( );  // calculate the score of total dynamic rank
+   int staticScore( );  // calculate static score
+   int dynamicScore( );  // calculate dynamic score
 
    int dynamicRankingScore( );  // run functions and return the dynamic ranking score of the matching doc
 
@@ -30,7 +31,12 @@ private:
    const unsigned int MaxToBeShort = 10, MinToBeFreq = 10, MinToBeNearTop = 200;  
    const float MinRatioToBeMost = 0.8;  
 
-   // heuristic
+   const unsigned int MaxShortTitle = 20, MinNiceDocLength = 500, MaxNiceDocLength = 2000, MaxShortUrl = 20;  
+
+   // static heuristic
+   int shortTitleWeight, docLengthWeight, shortUrlWeight = 0;  
+
+   // dynamic heuristic
    unsigned int numShortSpan, numInOrderSpan, numExactPhrase, numTopSpan, numMostWordFreq = 0;
    int shortSpanWeight, inOrderSpanWeight, exactPhraseWeight, topSpanWeight, mostWordFreqWeight = 0;
 };
