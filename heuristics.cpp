@@ -154,9 +154,9 @@ int Ranker::staticScore( )
    }
 
 
-int Ranker::dynamicRankingScore(  )
+int Ranker::rankingScore(  )
    {
    rarestWord( );  
    forward( );  
-   return dynamicScore( );  
+   return staticScore( ) * staticWeight +  dynamicScore( ) * dynamicWeight;  
    }

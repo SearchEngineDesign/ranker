@@ -17,7 +17,7 @@ public:
    int staticScore( );  // calculate static score
    int dynamicScore( );  // calculate dynamic score
 
-   int dynamicRankingScore( );  // run functions and return the dynamic ranking score of the matching doc
+   int rankingScore( );  // run functions and return the ranking score of the matching doc
 
 private:
 
@@ -39,4 +39,7 @@ private:
    // dynamic heuristic
    unsigned int numShortSpan, numInOrderSpan, numExactPhrase, numTopSpan, numMostWordFreq = 0;
    int shortSpanWeight, inOrderSpanWeight, exactPhraseWeight, topSpanWeight, mostWordFreqWeight = 0;
+
+   // static & dynamic weight
+   int staticWeight, dynamicWeight = 0;  
 };
