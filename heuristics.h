@@ -15,7 +15,7 @@ public:
    void forward( );  // one pass of isrs; count heuristics
 
    int staticScore( );  // calculate static score
-   int dynamicScore( );  // calculate dynamic score
+   int dynamicScore( );  // calculate dynamic score; TODO: title, url, head, body
 
    int rankingScore( );  // run functions and return the ranking score of the matching doc
 
@@ -34,12 +34,12 @@ private:
    const unsigned int MaxShortTitle = 20, MinNiceDocLength = 500, MaxNiceDocLength = 2000, MaxShortUrl = 20;  
 
    // static heuristic
-   int shortTitleWeight, docLengthWeight, shortUrlWeight = 0;  
+   int shortTitleWeight = 0, docLengthWeight = 0, shortUrlWeight = 0;  
 
    // dynamic heuristic
-   unsigned int numShortSpan, numInOrderSpan, numExactPhrase, numTopSpan, numMostWordFreq = 0;
-   int shortSpanWeight, inOrderSpanWeight, exactPhraseWeight, topSpanWeight, mostWordFreqWeight = 0;
+   unsigned int numShortSpan = 0, numInOrderSpan = 0, numExactPhrase = 0, numTopSpan = 0, numMostWordFreq = 0;
+   int shortSpanWeight = 0, inOrderSpanWeight = 0, exactPhraseWeight = 0, topSpanWeight = 0, mostWordFreqWeight = 0;
 
    // static & dynamic weight
-   int staticWeight, dynamicWeight = 0;  
+   int staticWeight = 0, dynamicWeight = 0;  
 };

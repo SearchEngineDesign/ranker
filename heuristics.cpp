@@ -158,5 +158,6 @@ int Ranker::rankingScore(  )
    {
    rarestWord( );  
    forward( );  
+   std::cout << "short span: " << numShortSpan << " , in order span: " << numInOrderSpan << " , exact phrase: " << numExactPhrase << " , top span: " << numTopSpan << " , most word freq: " << numMostWordFreq << "\n";
    return staticScore( ) * staticWeight +  dynamicScore( ) * dynamicWeight;  
    }
