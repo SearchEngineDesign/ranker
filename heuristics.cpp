@@ -25,7 +25,8 @@ void Ranker::rarestWord( )
       while ( tmpISR != nullptr && tmpISR->GetStartLocation( ) > docBegin && tmpISR->GetStartLocation( ) < docEnd ) 
          {
          wordCount ++; 
-         tmpISR->Next( );  
+         if ( tmpISR->Next( ) == nullptr )
+            break;    
          }
       if ( wordCount < rarestOccurrences )
          {
@@ -44,6 +45,8 @@ void Ranker::rarestWord( )
    if ( ( float ) numFreqWord / numWords >= MinRatioToBeMost )
       numMostWordFreq ++;  
 
+   std::cout << "rarest: " << rarest << ", occurrence: " << rarestOccurrences << std::endl;
+
    }   
 
 
@@ -51,30 +54,30 @@ void Ranker::forward( )
    {
    ISRWord *tmpRarestISR = words[ rarest ];  
    vector< Location > spanLocations( numWords );  // locations of words in a span
-   spanLocations[ rarest ] = tmpRarestISR->GetStartLocation( );  
 
    for ( int i = 0; i < rarestOccurrences; i ++ )
       {
       Location rarestWordLocation = tmpRarestISR->GetStartLocation( );  
-      Location nearestLocation = SIZE_MAX, farthestLocation = 0;  // for heuristics
+      spanLocations[ rarest ] = rarestWordLocation;  
       // arrange other ISRs to as close as possible to the rarest word
       for ( int j = 0; j < numWords; j ++ )
          {
          if ( j != rarest )
             {
             ISRWord *tmpOtherISR = words[ j ];  
-            size_t minDifference = SIZE_MAX;  
+            int minDifference = INT_MAX;  
 
             while ( tmpOtherISR != nullptr )
                {
                Location otherWordLocation = tmpOtherISR->GetStartLocation( );  
-               size_t difference = rarestWordLocation - otherWordLocation;  
-
+               int difference = rarestWordLocation - otherWordLocation;  
+               // std::cout << "diff: " <<  difference << " other word: " << otherWordLocation << " rarest word: " << rarestWordLocation << std::endl;
                if ( difference > 0 )
                   {
                   minDifference = difference;  
                   spanLocations[ j ] = otherWordLocation;  
-                  tmpOtherISR->Next( );  
+                  if ( tmpOtherISR->Next( ) == nullptr )
+                     break;  
                   }
                else
                   {
@@ -88,18 +91,26 @@ void Ranker::forward( )
                   break;
                   }
                }
-            
-            // record nearest and farthest location ( for heuristics )
-            if ( spanLocations[ j ] < nearestLocation )
-               nearestLocation = spanLocations[ j ];  
-            else if ( spanLocations[ j ] > farthestLocation )
-               farthestLocation = spanLocations[ j ];  
 
             // reset isr j
             words[ j ]->Seek( docBegin );
 
             }
          }
+
+      Location nearestLocation = SIZE_MAX, farthestLocation = 0;  // for heuristics
+      for ( int i = 0; i < numWords; i ++ )
+         {
+         // record nearest and farthest location ( for heuristics )
+         if ( spanLocations[ i ] < nearestLocation )
+            nearestLocation = spanLocations[ i ];  
+         if ( spanLocations[ i ] > farthestLocation )
+            farthestLocation = spanLocations[ i ];  
+         std::cout << spanLocations[i] << " ";
+         }
+
+      std::cout << std::endl;
+      std::cout << "farthest loc: " << farthestLocation << ", nearest loc: " << nearestLocation << std::endl;
 
       // calculate heuristics
       // if short span
@@ -125,7 +136,8 @@ void Ranker::forward( )
 
 
       // look into next occurrence of the rarest word
-      tmpRarestISR->Next( );  // nullptr if reaching the end of posting list; TODO: memory leak?
+      if ( tmpRarestISR->Next( ) == nullptr )  // nullptr if reaching the end of posting list; TODO: memory leak? 
+         break;  
       }
    }
 
