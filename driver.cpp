@@ -213,6 +213,7 @@ private:
 
 vector<unsigned int> shortSpans, inOrderSpans, exactPharses, topSpans, freq;
 vector<int> scores;
+vector<string> urls;
 ReaderWriterLock writerLock;
 
 
@@ -229,7 +230,8 @@ void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
 
       std::cout << "matching doc: " << isr ->GetMatchingDoc() << std::endl;
       std::cout << readHandler.getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
-      
+      urls.push_back(readHandler.getDocument(isr ->GetMatchingDoc())->c_str());
+
       target = isr->EndDoc->GetStartLocation() + 1;
       // std::cout << "target: " << target << "\n";
 
@@ -276,10 +278,10 @@ void* searchChunk(void *args) {
 }
 
 
-int main( ) {
+vector<string> results( string & searchString ) {
 
    const char* filename = "../log/chunks/8";
-   string searchString = "recipe";
+   // string searchString = "recipe";
    struct SearchArgs args{filename, searchString};
 
    
@@ -293,4 +295,8 @@ int main( ) {
    for (int i = 0; i < scores.size(); i ++) {
       std::cout << "score: " << scores[i] << std::endl;
    }
+
+   return urls;
+
 }
+
