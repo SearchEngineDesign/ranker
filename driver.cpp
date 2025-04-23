@@ -223,11 +223,13 @@ vector<string> getResults( string searchString ) {
 
 }
 
-int main() {
-   string str = "york city";
-   vector<string> urls = getResults(str);
 
-   for (int i = 0; i < urls.size(); i ++) {
-      std::cout << urls[i] << std::endl;
-   }
-}
+// int main() {
+//    string str = "university of michigan";
+//    vector<string> urls = getResults(str);
+
+
+//    for (int i = 0; i < urls.size(); i ++) {
+//       std::cout << urls[i] << std::endl;
+//    }
+// }
