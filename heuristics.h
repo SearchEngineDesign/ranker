@@ -1,14 +1,20 @@
 #include "../isr/isr.h"
 #include "../isr/isrHandler.h"
 #include <climits>
+#include "../frontier/ReaderWriterLock.h"
+
 
 class Ranker 
 {
 public:
+
+   Ranker( ISRWord **w, ISREndDoc *e, int num ) {
+      words = w;
+      endDoc = e;
+      numWords = num;
+   }
    
-   ISRWord **words;  // flatten query words; TODO: seek to the beginning of the matching doc
-   ISREndDoc *endDoc;  // endDoc pointing to the matching doc; TODO: seek to the matching doc
-   int numWords;  
+   ~Ranker() { }
 
    void rarestWord( );  // count occurrence of each word in the matching doc and find the rarest; set numMostWordsFreq
 
@@ -17,9 +23,21 @@ public:
    int staticScore( );  // calculate static score
    int dynamicScore( );  // calculate dynamic score; TODO: title, url, head, body
 
-   int rankingScore( );  // run functions and return the ranking score of the matching doc
+   int rankingScore( ReaderWriterLock & writerLock );  // run functions and return the ranking score of the matching doc
+
+   vector<unsigned int> getHeuristics( );
+
+   unsigned int getNumShortSpan();
+   unsigned int getNumInOrderSpan();
+   unsigned int getNumExactPhrase();
+   unsigned int getNumTopSpan();
+   unsigned int getNumMostWordFreq();
 
 private:
+
+   ISRWord **words;  // flatten query words; TODO: seek to the beginning of the matching doc
+   ISREndDoc *endDoc;  // endDoc pointing to the matching doc; TODO: seek to the matching doc
+   int numWords;    
 
    size_t distance( Location loc1, Location loc2 );  // return distance between loc1 and loc2
 
@@ -38,7 +56,7 @@ private:
 
    // dynamic heuristic
    unsigned int numShortSpan = 0, numInOrderSpan = 0, numExactPhrase = 0, numTopSpan = 0, numMostWordFreq = 0;
-   int shortSpanWeight = 0, inOrderSpanWeight = 0, exactPhraseWeight = 0, topSpanWeight = 0, mostWordFreqWeight = 0;
+   int shortSpanWeight = 2, inOrderSpanWeight = 3, exactPhraseWeight = 5, topSpanWeight = 3, mostWordFreqWeight = 3;
 
    // static & dynamic weight
    int staticWeight = 0, dynamicWeight = 0;  

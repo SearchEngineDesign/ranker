@@ -166,10 +166,47 @@ int Ranker::staticScore( )
    }
 
 
-int Ranker::rankingScore(  )
+int Ranker::rankingScore( ReaderWriterLock & writerLock )
    {
    rarestWord( );  
    forward( );  
    std::cout << "short span: " << numShortSpan << " , in order span: " << numInOrderSpan << " , exact phrase: " << numExactPhrase << " , top span: " << numTopSpan << " , most word freq: " << numMostWordFreq << "\n";
-   return staticScore( ) * staticWeight +  dynamicScore( ) * dynamicWeight;  
+   
+   // WithWriteLock withWriteLock(writerLock);
+
+   
+   return dynamicScore( );  
    }
+
+
+vector<unsigned int> Ranker::getHeuristics( )
+   {
+   vector<unsigned int> results;  
+   results.push_back( numShortSpan );  
+   results.push_back( numInOrderSpan );  
+   results.push_back( numExactPhrase );  
+   results.push_back( numTopSpan );  
+   results.push_back( numMostWordFreq );  
+   return results;  
+   }
+
+
+unsigned int Ranker::getNumShortSpan() {
+   return numShortSpan;
+}
+
+unsigned int Ranker::getNumInOrderSpan() {
+   return numInOrderSpan;
+}
+
+unsigned int Ranker::getNumExactPhrase() {
+   return numExactPhrase;
+}
+
+unsigned int Ranker::getNumTopSpan() {
+   return numTopSpan;
+}
+
+unsigned int Ranker::getNumMostWordFreq() {
+   return numMostWordFreq;
+}
