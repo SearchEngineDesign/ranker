@@ -1,177 +1,10 @@
-#include "heuristics.h"
-#include "../isr/isr.h"
-#include "../index/index.h"
-#include "../isr/isrHandler.h"
+
 #include <cstddef>
 #include "../frontier/ReaderWriterLock.h"
+#include <ostream>
 #include <pthread.h>
-
-
-class QueryDemo 
-{
-public:
-   QueryDemo() {}
-
-   QueryDemo(string& input, ISRHandler & isrHandler, char t) {
-      handler = isrHandler;
-      // split input into tokens (e.g. input = "quick brown fox")
-
-      string word;
-
-      type = t;
-
-      switch (type) {
-         case 'h':
-            word = "@";
-            break;
-         case 't':
-            word = "<";
-            break;
-         case 'b':
-            word = "";
-            break;
-         default:
-            word = "";
-            break;
-      }
-
-      for ( int i = 0; i < input.length(); i ++ ) {
-         char c = input[i];
-         if ( c == ' ' ) {
-            switch (type) {
-               case 'b':
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "";
-                  }
-                  break;
-               case 't':
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "<";
-                  }
-                  break;
-               case 'h':
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "@";
-                  }
-                  break;
-               default:
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "";
-                  }
-                  break;
-            }
-            
-         }
-         else {
-            word.push_back(c);
-         }
-      }
-      if ( !word.empty() || word != "@" || word != "<" )
-         tokens.push_back(word);
-
-      if (tokens.empty()) {
-         inIndex = false;
-         return;
-      }
-
-      for (int i = 0; i < tokens.size(); i ++)
-         std::cout << "token: " << tokens[i].c_str() << std::endl;
-
-
-      // initialize isrword
-      for (int i = 0; i < tokens.size(); i ++) {
-         ISRWord *isrWord = handler.OpenISRWord( tokens[i].data() );
-         // ISRWord *isrWordFlatten = handler.OpenISRWord( tokens[i].data() );
-         if (isrWord != nullptr) {
-            terms.push_back(isrWord);
-            // flattenTerms.push_back(isrWordFlatten);
-         }
-      }
-      if (terms.empty())
-         inIndex = false;
-      else if (terms.size() > 1){
-         isrAnd = handler.OpenISRAnd(terms.data(), terms.size());
-         if (isrAnd != nullptr)
-            inIndex = true;
-
-         isrPhrase = handler.OpenISRPhrase(terms.data(), terms.size());
-         if (isrPhrase != nullptr)
-            inIndex = true;
-      }
-      else {
-         inIndex = true;
-      }
-
-   }
-
-   ~QueryDemo() {
-      for (int i = 0; i < terms.size(); i ++) {
-         handler.CloseISR(terms[i]);
-         // handler.CloseISR(flattenTerms[i]);
-      }
-      if (isrAnd != nullptr)
-         handler.CloseISR(isrAnd);
-      if (isrPhrase != nullptr)
-         handler.CloseISR(isrPhrase);
-   }
-
-   // return whether words are in index
-   bool isInIndex() {
-      return inIndex;
-   }
-
-   // flattened query
-   ISR **flatQuery(size_t target) {
-      // for (int i = 0; i < flattenTerms.size(); i ++) {
-      //    flattenTerms[i]->Seek(target);
-      // }
-      // return flattenTerms.data();
-      return terms.data();
-   }
-
-   // isr to word or isr to And word
-   ISR *getISRAnd() {
-      if (terms.size() == 1) {
-         return terms[0];
-      }
-      else {
-         return isrAnd;
-      }
-   }
-
-   // isr to word or isr to phrase
-   ISR *getISRPhrase() {
-      if (terms.size() == 1) {
-         return terms[0];
-      }
-      else {
-         return isrPhrase;
-      }
-   }
-
-   int getNumWords() {
-      return terms.size();
-   }
-
-   ISRHandler handler; // one handler for one index chunk
-
-private:
-
-   vector<string> tokens;
-
-   vector<ISR*> terms;
-
-   char type;
-
-   // vector<ISR*> flattenTerms; // TODO: protect
-   ISRAnd *isrAnd = nullptr;
-   ISRPhrase *isrPhrase = nullptr;
-   bool inIndex = false;
-};
+#include "driver.h"
+#include <filesystem>
 
 
 // vector<Location> targets; 
@@ -211,10 +44,34 @@ private:
 //    }
 // }
 
-vector<unsigned int> shortSpans, inOrderSpans, exactPharses, topSpans, freq;
-vector<int> scores;
-vector<string> urls;
+// vector<unsigned int> shortSpans, inOrderSpans, exactPharses, topSpans, freq;
+
+// vector<int> scores;
+// vector<string> urls;
+
+vector<Result> results;
+
 ReaderWriterLock writerLock;
+
+
+bool compareResults(const Result& a, const Result& b) {
+   return a.score > b.score;
+}
+
+
+struct SearchArgs {
+   string fname;  // File name
+   string input; // Input string to search
+
+   // Custom copy assignment operator
+   SearchArgs& operator=(const SearchArgs& other) {
+      if (this != &other) {
+         fname = other.fname;
+         input = other.input;
+      }
+      return *this;
+   }
+};
 
 
 void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
@@ -230,7 +87,10 @@ void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
 
       std::cout << "matching doc: " << isr ->GetMatchingDoc() << std::endl;
       std::cout << readHandler.getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
-      urls.push_back(readHandler.getDocument(isr ->GetMatchingDoc())->c_str());
+      
+      // writerLock.writeLock();
+      // urls.push_back(readHandler.getDocument(isr ->GetMatchingDoc())->c_str());
+      // writerLock.writeUnlock();
 
       target = isr->EndDoc->GetStartLocation() + 1;
       // std::cout << "target: " << target << "\n";
@@ -239,16 +99,11 @@ void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
       int score = ranker.rankingScore(writerLock);
 
       WithWriteLock withWriteLock(writerLock);
-      scores.push_back(score);
+      // scores.push_back(score);
+      results.push_back({score, readHandler.getDocument(isr ->GetMatchingDoc())->c_str()});
 
    }
 }
-
-
-struct SearchArgs {
-   const char* fname;  // File name
-   string & input; // Input string to search
-};
 
 
 // search query in a specific chunk
@@ -256,16 +111,19 @@ void* searchChunk(void *args) {
 
    SearchArgs* searchArgs = static_cast<SearchArgs*>(args);
 
-   const char* fname = searchArgs->fname;
+   const char* fname = searchArgs->fname.cstr();
    string input = searchArgs->input;
-
 
    IndexReadHandler readHandler = IndexReadHandler();
    readHandler.ReadIndex(fname);
    ISRHandler handler;
    handler.SetIndexReadHandler(&readHandler);
 
-   QueryDemo query(input, handler, 'h');
+   // for (int i = 0; i < 50; i ++) {
+   //    std::cout << "doc: " << readHandler.getDocument(i)->c_str() << std::endl;
+   // }
+
+   QueryDemo query(input, handler, 'b'); // TODO: search for all types
    if (!query.isInIndex()) {
       std::cout << "not in index\n";
       return nullptr;
@@ -278,25 +136,96 @@ void* searchChunk(void *args) {
 }
 
 
-vector<string> results( string & searchString ) {
+inline void reverse_string(string& str) 
+{
+if (str.empty()) return;
+size_t left = 0;
+size_t right = str.size() - 1;
+while (left < right) 
+   {
+      // Swap characters at left and right positions
+      char temp = str[left];
+      str[left] = str[right];
+      str[right] = temp;
+      // Move inward from both ends
+      ++left;
+      --right;
+   }
+} 
 
-   const char* filename = "../log/chunks/8";
-   // string searchString = "recipe";
-   struct SearchArgs args{filename, searchString};
 
-   
-   pthread_t thread1, thread2;
-
-   pthread_create(&thread1, nullptr, searchChunk, &args);
-   // pthread_create(&thread2, nullptr, searchChunk, &args);
-
-   pthread_join(thread1, nullptr);
-
-   for (int i = 0; i < scores.size(); i ++) {
-      std::cout << "score: " << scores[i] << std::endl;
+string to_string(int n)
+   {
+   if (n == 0) return "0";
+   bool negative = n < 0;
+   string temp;
+   if (negative) n = -n;
+   while (n > 0) 
+      {
+      temp.push_back( (char)(n % 10 + '0') );
+      n /= 10;
+      }
+   if (negative) 
+      temp.push_back('-');
+   reverse_string( temp );
+   return temp;
    }
 
-   return urls;
+
+// input a search query (searchString), return a vector of urls
+vector<string> getResults( string searchString ) {
+
+   // // clear urls
+   // urls.clear();
+
+   // multiple threads for chunks
+
+   vector<pthread_t> threads(100);
+   vector<SearchArgs> argList(100);
+
+   int i = 0;
+   for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
+      string filename(entry.path().c_str());
+      std::cout << entry.path() << std::endl;
+
+      argList[i] = {filename, searchString};
+      pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
+      i ++;
+   }
+
+   // for (int i = 0; i < 10; i ++) {
+   //    string filename = (string)"../log/chunks/" + to_string(101 + i);
+   //    // string filename = (string)"../log/8";
+   //    std::cout << filename << std::endl;
+   //    argList[i] = {filename, searchString};
+
+   //    pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
+   // }
+
+
+   for (int j = 0; j < i; j ++) {
+      pthread_join(threads[j], nullptr);
+   }
+
+   // sort top 10 results
+   std::sort(results.begin(), results.end(), compareResults);
+
+   // Extract the top 10 URLs
+   vector<string> top10Urls;
+   for (size_t i = 0; i < std::min(static_cast<size_t>(10), results.size()); ++i) {
+      top10Urls.push_back(results[i].url);
+      // std::cout << "score: " << results[i].score << std::endl;
+   }
+
+   return top10Urls;
 
 }
 
+// int main() {
+//    string str = "government";
+//    vector<string> urls = getResults(str);
+
+//    for (int i = 0; i < urls.size(); i ++) {
+//       std::cout << urls[i] << std::endl;
+//    }
+// }
