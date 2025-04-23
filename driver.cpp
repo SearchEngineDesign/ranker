@@ -78,29 +78,25 @@ void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
    ISR *isr = query.getISRPhrase();
 
    size_t target = 0;
-   int i = 0;
+
    while (isr->Seek(target) != nullptr) {
 
-      if (i == 10)
-         break;
-      i ++;
-
       std::cout << "matching doc: " << isr ->GetMatchingDoc() << std::endl;
-      std::cout << readHandler.getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
+      const char * docString = readHandler.getDocument(isr ->GetMatchingDoc())->c_str();
       
       // writerLock.writeLock();
       // urls.push_back(readHandler.getDocument(isr ->GetMatchingDoc())->c_str());
       // writerLock.writeUnlock();
-
       target = isr->EndDoc->GetStartLocation() + 1;
       // std::cout << "target: " << target << "\n";
+      
+      Ranker ranker((ISRWord **)query.flatQuery(target), isr->EndDoc, query.getNumWords());
 
-      Ranker ranker((ISRWord **) query.flatQuery(target), isr->EndDoc, query.getNumWords());
       int score = ranker.rankingScore(writerLock);
 
       WithWriteLock withWriteLock(writerLock);
       // scores.push_back(score);
-      results.push_back({score, readHandler.getDocument(isr ->GetMatchingDoc())->c_str()});
+      results.push_back({score, docString});
 
    }
 }
@@ -123,7 +119,7 @@ void* searchChunk(void *args) {
    //    std::cout << "doc: " << readHandler.getDocument(i)->c_str() << std::endl;
    // }
 
-   QueryDemo query(input, handler, 'b'); // TODO: search for all types
+   QueryDemo query(input, handler, 't'); // TODO: search for all types
    if (!query.isInIndex()) {
       std::cout << "not in index\n";
       return nullptr;
@@ -142,6 +138,7 @@ vector<string> getResults( string searchString ) {
 
    // // clear urls
    // urls.clear();
+   results.clear();
 
    // multiple threads for chunks
 
@@ -174,6 +171,10 @@ vector<string> getResults( string searchString ) {
 
    // sort top 10 results
    std::sort(results.begin(), results.end(), compareResults);
+
+   for (int i = 0; i < results.size(); i ++) {
+      results[i].print();
+   }
 
    // Extract the top 10 URLs
    vector<string> top10Urls;

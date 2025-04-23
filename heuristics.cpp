@@ -39,14 +39,15 @@ void Ranker::rarestWord( )
 
       // reset isrs
       words[ i ]->Seek( docBegin );  // TODO: avoid reset
+      endDoc->Seek(docBegin);
       }
 
    // increment numMostWordFreq
    if ( ( float ) numFreqWord / numWords >= MinRatioToBeMost )
-      numMostWordFreq ++;  
+      numMostWordFreq ++;
 
+   endDoc->Seek(docBegin);
    std::cout << "rarest: " << rarest << ", occurrence: " << rarestOccurrences << std::endl;
-
    }   
 
 
@@ -94,7 +95,7 @@ void Ranker::forward( )
 
             // reset isr j
             words[ j ]->Seek( docBegin );
-
+            endDoc->Seek(docBegin);
             }
          }
 
@@ -144,11 +145,12 @@ void Ranker::forward( )
 
 int Ranker::dynamicScore( )
    {
-   return numShortSpan * shortSpanWeight + 
+      int score = numShortSpan * shortSpanWeight + 
       numInOrderSpan * inOrderSpanWeight + 
       numExactPhrase * exactPhraseWeight + 
       numTopSpan * topSpanWeight + 
       numMostWordFreq * mostWordFreqWeight;  
+      return score;
    }
 
 
