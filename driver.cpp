@@ -90,7 +90,7 @@ struct SearchArgs {
 
 
 void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
-   ISR *isr = query.getISRPhrase();
+   ISR *isr = query.getISRAnd();
 
    size_t target = 0;
 
