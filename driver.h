@@ -158,6 +158,10 @@ public:
       return terms.size();
    }
 
+   char getType() {
+      return type;
+   }
+
    ISRHandler handler; // one handler for one index chunk
 
 private:

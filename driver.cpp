@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include "driver.h"
 #include <filesystem>
+#include <unordered_map>
 
 
 // vector<Location> targets; 
@@ -49,7 +50,20 @@
 // vector<int> scores;
 // vector<string> urls;
 
-vector<Result> results;
+// vector<Result> results;
+
+static size_t hashbasic(const char *c) 
+   {
+      unsigned long hash = fnvOffset;
+      while (*c) {
+         hash *= fnvPrime;
+         hash ^= (*c);
+         c++;
+      }
+      return hash % initialSize;
+   }
+
+std::unordered_map<size_t, Result> results_map;
 
 ReaderWriterLock writerLock;
 
@@ -57,6 +71,7 @@ ReaderWriterLock writerLock;
 bool compareResults(const Result& a, const Result& b) {
    return a.score > b.score;
 }
+
 
 
 struct SearchArgs {
@@ -96,7 +111,13 @@ void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
 
       WithWriteLock withWriteLock(writerLock);
       // scores.push_back(score);
-      results.push_back({score, docString});
+
+      // results.push_back({score, docString});
+      if (query.getType() == 't')
+         results_map[hashbasic(docString)].score += score * 10;
+      else
+         results_map[hashbasic(docString)].score += score;
+      results_map[hashbasic(docString)].url = docString;
 
    }
 }
@@ -119,14 +140,16 @@ void* searchChunk(void *args) {
    //    std::cout << "doc: " << readHandler.getDocument(i)->c_str() << std::endl;
    // }
 
-   QueryDemo query(input, handler, 't'); // TODO: search for all types
-   if (!query.isInIndex()) {
-      std::cout << "not in index\n";
-      return nullptr;
+
+   QueryDemo query(input, handler, 'h'); // TODO: search for all types
+   if (query.isInIndex()) {
+      getRankScore(query, readHandler);
    }
 
-   getRankScore(query, readHandler);
-
+   QueryDemo query_b(input, handler, 'b'); // TODO: search for all types
+   if (query_b.isInIndex()) {
+      getRankScore(query_b, readHandler);
+   }
 
    return nullptr;
 }
@@ -138,7 +161,11 @@ vector<string> getResults( string searchString ) {
 
    // // clear urls
    // urls.clear();
-   results.clear();
+
+   // results.clear();
+
+   results_map.clear();
+
 
    // multiple threads for chunks
 
@@ -170,16 +197,21 @@ vector<string> getResults( string searchString ) {
    }
 
    // sort top 10 results
-   std::sort(results.begin(), results.end(), compareResults);
+   vector<Result> sorted_results;
+   for (const auto& pair : results_map) {
+      sorted_results.push_back({pair.second.score, pair.second.url});
+   }
 
-   for (int i = 0; i < results.size(); i ++) {
-      results[i].print();
+   std::sort(sorted_results.begin(), sorted_results.end(), compareResults);
+
+   for (int i = 0; i < sorted_results.size(); i ++) {
+      sorted_results[i].print();
    }
 
    // Extract the top 10 URLs
    vector<string> top10Urls;
-   for (size_t i = 0; i < std::min(static_cast<size_t>(10), results.size()); ++i) {
-      top10Urls.push_back(results[i].url);
+   for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i) {
+      top10Urls.push_back(sorted_results[i].url);
       // std::cout << "score: " << results[i].score << std::endl;
    }
 
@@ -187,11 +219,11 @@ vector<string> getResults( string searchString ) {
 
 }
 
-// int main() {
-//    string str = "government";
-//    vector<string> urls = getResults(str);
+int main() {
+   string str = "university of michigan";
+   vector<string> urls = getResults(str);
 
-//    for (int i = 0; i < urls.size(); i ++) {
-//       std::cout << urls[i] << std::endl;
-//    }
-// }
+   for (int i = 0; i < urls.size(); i ++) {
+      std::cout << urls[i] << std::endl;
+   }
+}
