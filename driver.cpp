@@ -90,7 +90,7 @@ struct SearchArgs {
 
 
 void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
-   ISR *isr = query.getISRPhrase();
+   ISR *isr = query.getISRAnd();
 
    size_t target = 0;
 
@@ -105,7 +105,11 @@ void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
       target = isr->EndDoc->GetStartLocation() + 1;
       // std::cout << "target: " << target << "\n";
       
-      Ranker ranker((ISRWord **)query.flatQuery(target), isr->EndDoc, query.getNumWords());
+      // for url length
+      string url(docString);
+      size_t urlLength = url.length();
+
+      Ranker ranker((ISRWord **)query.flatQuery(target), isr->EndDoc, query.getNumWords(), urlLength);
 
       int score = ranker.rankingScore(writerLock);
 
@@ -220,7 +224,7 @@ vector<string> getResults( string searchString ) {
 }
 
 int main() {
-   string str = "university of michigan";
+   string str = "york city";
    vector<string> urls = getResults(str);
 
    for (int i = 0; i < urls.size(); i ++) {

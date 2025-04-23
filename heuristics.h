@@ -8,10 +8,11 @@ class Ranker
 {
 public:
 
-   Ranker( ISRWord **w, ISREndDoc *e, int num ) {
+   Ranker( ISRWord **w, ISREndDoc *e, int num, size_t urlLen ) {
       words = w;
       endDoc = e;
       numWords = num;
+      urlLength = urlLen;
    }
    
    ~Ranker() { }
@@ -37,7 +38,9 @@ private:
 
    ISRWord **words;  // flatten query words; TODO: seek to the beginning of the matching doc
    ISREndDoc *endDoc;  // endDoc pointing to the matching doc; TODO: seek to the matching doc
-   int numWords;    
+   int numWords;
+
+   size_t urlLength;    
 
    size_t distance( Location loc1, Location loc2 );  // return distance between loc1 and loc2
 

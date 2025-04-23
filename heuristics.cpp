@@ -45,6 +45,7 @@ void Ranker::rarestWord( )
    // increment numMostWordFreq
    if ( ( float ) numFreqWord / numWords >= MinRatioToBeMost )
       numMostWordFreq ++;
+   
 
    endDoc->Seek(docBegin);
    std::cout << "rarest: " << rarest << ", occurrence: " << rarestOccurrences << std::endl;
@@ -156,14 +157,13 @@ int Ranker::dynamicScore( )
 
 int Ranker::staticScore( )
    {
-   int isShortTitle, isNiceDocLength, isShortUrl = 0;  
+   int isNiceDocLength, isShortUrl = 0;  
+   size_t docLength = docEnd - docBegin;
+   // isShortTitle = endDoc->GetTitleLength( ) <= MaxShortTitle ? 1 : 0;  
+   isNiceDocLength = ( docLength >= MinNiceDocLength && docLength <= MaxNiceDocLength ) ? 1 : 0;  
+   isShortUrl = ( urlLength <= MaxShortUrl ) ? 1 : 0;  
 
-   isShortTitle = endDoc->GetTitleLength( ) <= MaxShortTitle ? 1 : 0;  
-   isNiceDocLength = ( endDoc->GetDocumentLength( ) >= MinNiceDocLength && endDoc->GetDocumentLength( ) <= MaxNiceDocLength ) ? 1 : 0;  
-   isShortUrl = ( endDoc->GetUrlLength( ) <= MaxShortUrl ) ? 1 : 0;  
-
-   return isShortTitle * shortTitleWeight + 
-      isNiceDocLength * docLengthWeight + 
+   return isNiceDocLength * docLengthWeight + 
       isShortUrl * shortUrlWeight;  
    }
 
@@ -173,9 +173,6 @@ int Ranker::rankingScore( ReaderWriterLock & writerLock )
    rarestWord( );  
    forward( );  
    std::cout << "short span: " << numShortSpan << " , in order span: " << numInOrderSpan << " , exact phrase: " << numExactPhrase << " , top span: " << numTopSpan << " , most word freq: " << numMostWordFreq << "\n";
-   
-   // WithWriteLock withWriteLock(writerLock);
-
    
    return dynamicScore( );  
    }
