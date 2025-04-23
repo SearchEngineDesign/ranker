@@ -136,41 +136,6 @@ void* searchChunk(void *args) {
 }
 
 
-inline void reverse_string(string& str) 
-{
-if (str.empty()) return;
-size_t left = 0;
-size_t right = str.size() - 1;
-while (left < right) 
-   {
-      // Swap characters at left and right positions
-      char temp = str[left];
-      str[left] = str[right];
-      str[right] = temp;
-      // Move inward from both ends
-      ++left;
-      --right;
-   }
-} 
-
-
-string to_string(int n)
-   {
-   if (n == 0) return "0";
-   bool negative = n < 0;
-   string temp;
-   if (negative) n = -n;
-   while (n > 0) 
-      {
-      temp.push_back( (char)(n % 10 + '0') );
-      n /= 10;
-      }
-   if (negative) 
-      temp.push_back('-');
-   reverse_string( temp );
-   return temp;
-   }
-
 
 // input a search query (searchString), return a vector of urls
 vector<string> getResults( string searchString ) {
