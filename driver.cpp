@@ -192,39 +192,28 @@ vector<string> getResults( string searchString ) {
 
    results.clear();
 
-   // results_map.clear();
+   const char *CHUNK_DIR = "../log/chunks";
 
-   // multiple threads for chunks
+   int chunkCount = 0;
+   for (auto& p : std::filesystem::directory_iterator(CHUNK_DIR))
+      ++chunkCount;
 
-   vector<pthread_t> threads(100);
-   vector<SearchArgs> argList(100);
+   vector<pthread_t> threads(chunkCount);
+   vector<SearchArgs> argList(chunkCount);
 
    int i = 0;
-   for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
+   for (const auto& entry : std::filesystem::directory_iterator(CHUNK_DIR)) {
       string filename(entry.path().c_str());
       std::cout << entry.path() << std::endl;
 
       argList[i] = {filename, searchString};
       pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
-      i ++;
+      ++i;
    }
-
-   // string filename ="../log/chunks/30";
-   // pthread_t thread;
-   // SearchArgs args = {filename, searchString};
-   // pthread_create(&thread, nullptr, searchChunk, &args);
 
    for (int j = 0; j < i; j ++) {
       pthread_join(threads[j], nullptr);
    }
-
-   // pthread_join(thread, nullptr);
-
-   // sort top 10 results
-   // vector<Result> sorted_results;
-   // for (const auto& pair : results_map) {
-   //    sorted_results.push_back({pair.second.score, pair.second.url});
-   // }
 
    std::sort(results.begin(), results.end(), compareResults);
 
