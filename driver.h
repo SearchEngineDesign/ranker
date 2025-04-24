@@ -22,10 +22,10 @@ public:
       type = t;
 
       switch (type) {
-         case 'h':
+         case 't':
             word = "@";
             break;
-         case 't':
+         case 'h':
             word = "<";
             break;
          case 'b':
@@ -46,13 +46,13 @@ public:
                      word = "";
                   }
                   break;
-               case 't':
+               case 'h':
                   if ( !word.empty()) {
                      tokens.push_back(word);
                      word = "<";
                   }
                   break;
-               case 'h':
+               case 't':
                   if ( !word.empty()) {
                      tokens.push_back(word);
                      word = "@";
@@ -102,6 +102,10 @@ public:
          isrPhrase = handler.OpenISRPhrase(terms.data(), terms.size());
          if (isrPhrase != nullptr)
             inIndex = true;
+
+         isrOr = handler.OpenISROr(terms.data(), terms.size());
+         if (isrOr != nullptr)
+            inIndex = true;
       }
       else {
          inIndex = true;
@@ -118,6 +122,8 @@ public:
          handler.CloseISR(isrAnd);
       if (isrPhrase != nullptr)
          handler.CloseISR(isrPhrase);
+      if (isrOr != nullptr)
+         handler.CloseISR(isrOr);
    }
 
    // return whether words are in index
@@ -141,6 +147,16 @@ public:
       }
       else {
          return isrAnd;
+      }
+   }
+
+   // isr to word or isr to Or
+   ISR *getISROr() {
+      if (terms.size() == 1) {
+         return terms[0];
+      }
+      else {
+         return isrOr;
       }
    }
 
@@ -175,6 +191,7 @@ private:
    // vector<ISR*> flattenTerms; // TODO: protect
    ISRAnd *isrAnd = nullptr;
    ISRPhrase *isrPhrase = nullptr;
+   ISROr *isrOr = nullptr;
    bool inIndex = false;
 };
 
