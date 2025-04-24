@@ -5,29 +5,30 @@
 #include <pthread.h>
 #include "driver.h"
 #include <filesystem>
-// #include <unordered_map>
+#include <unordered_map>
 #include "../queryCompiler/compiler.h"
 
+// TODO: can we use unordered_map
 
 // vector<unsigned int> shortSpans, inOrderSpans, exactPharses, topSpans, freq;
 
 // vector<int> scores;
 // vector<string> urls;
 
-vector<Result> results;
+// vector<Result> results;
 
-// static size_t hashbasic(const char *c) 
-//    {
-//       unsigned long hash = fnvOffset;
-//       while (*c) {
-//          hash *= fnvPrime;
-//          hash ^= (*c);
-//          c++;
-//       }
-//       return hash % initialSize;
-//    }
+static size_t hashbasic(const char *c) 
+   {
+      unsigned long hash = fnvOffset;
+      while (*c) {
+         hash *= fnvPrime;
+         hash ^= (*c);
+         c++;
+      }
+      return hash % initialSize;
+   }
 
-// std::unordered_map<size_t, Result> results_map;
+std::unordered_map<size_t, Result> results_map;
 
 ReaderWriterLock writerLock;
 
@@ -148,7 +149,8 @@ void getRankScoreQueryCompiler(QueryParser & parser) {
       }
 
       WithWriteLock withWriteLock(writerLock);
-      results.push_back({score, docString});
+      results_map[hashbasic(docString)] = {score, docString};
+      // results.push_back({score, docString});
 
    }
 }
@@ -172,12 +174,12 @@ void* searchChunk(void *args) {
    parser.SetIndexReadHandler(fname);
    getRankScoreQueryCompiler(parser);
 
-   // QueryDemo query(input, handler, 't'); // TODO: search for all types
+   // QueryDemo query(input, handler, 't'); 
    // if (query.isInIndex()) {
    //    getRankScore(query, readHandler);
    // }
 
-   // QueryDemo query_b(input, handler, 'b'); // TODO: search for all types
+   // QueryDemo query_b(input, handler, 'b'); 
    // if (query_b.isInIndex()) {
    //    getRankScore(query_b, readHandler);
    // }
@@ -190,9 +192,10 @@ void* searchChunk(void *args) {
 // input a search query (searchString), return a vector of urls
 vector<string> getResults( string searchString ) {
 
-   results.clear();
 
+   
    const char *CHUNK_DIR = "../log/chunks";
+   results_map.clear();
 
    int chunkCount = 0;
    for (auto& p : std::filesystem::directory_iterator(CHUNK_DIR))
@@ -215,16 +218,25 @@ vector<string> getResults( string searchString ) {
       pthread_join(threads[j], nullptr);
    }
 
-   std::sort(results.begin(), results.end(), compareResults);
 
-   for (int i = 0; i < results.size(); i ++) {
-      results[i].print();
+   // pthread_join(thread, nullptr);
+
+   // sort top 10 results
+   vector<Result> sorted_results;
+   for (const auto& pair : results_map) {
+      sorted_results.push_back({pair.second.score, pair.second.url});
+   }
+
+   std::sort(sorted_results.begin(), sorted_results.end(), compareResults);
+
+   for (int i = 0; i < sorted_results.size(); i ++) {
+      sorted_results[i].print();
    }
 
    // Extract the top 10 URLs
    vector<string> top10Urls;
-   for (size_t i = 0; i < std::min(static_cast<size_t>(10), results.size()); ++i) {
-      top10Urls.push_back(results[i].url);
+   for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i) {
+      top10Urls.push_back(sorted_results[i].url);
       // std::cout << "score: " << results[i].score << std::endl;
    }
 
@@ -234,7 +246,9 @@ vector<string> getResults( string searchString ) {
 
 
 // int main() {
-//    string str = "university michigan";
+
+//    string str = "my search engine";
+
 //    vector<string> urls = getResults(str);
 
 
