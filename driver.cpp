@@ -6,6 +6,7 @@
 #include "driver.h"
 #include <filesystem>
 #include <unordered_map>
+#include "../queryCompiler/compiler.h"
 
 
 // vector<Location> targets; 
@@ -127,6 +128,75 @@ void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
 }
 
 
+void getRankScoreQueryCompiler(QueryParser & parser) {
+   ISR *isr = parser.compile();
+
+   if (isr == nullptr)
+      return;
+
+   size_t target = 0;
+
+   while (isr->Seek(target) != nullptr) {
+
+      std::cout << "matching doc: " << isr ->GetMatchingDoc() << " " << parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
+      const char * docString = parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str();
+      
+      target = isr->EndDoc->GetStartLocation() + 1;
+      // std::cout << "target: " << target << "\n";
+      
+      // for url length
+      string url(docString);
+      size_t urlLength = url.length();
+
+      // body words
+      vector<ISRWord*> flatten = parser.getFlattenedWords();
+      if (!flatten.empty()) {
+         for (int i = 0; i < flatten.size(); i ++) {
+            flatten[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
+         }
+
+         // new end doc for ranker
+         ISREndDoc *endDoc = parser.getISRHandler().OpenISREndDoc();
+         endDoc->Seek(isr->EndDoc->GetStartLocation());
+
+         Ranker ranker((ISRWord**) flatten.data(), endDoc, int(flatten.size()), urlLength);
+
+         int score = ranker.rankingScore(writerLock);
+
+         writerLock.writeLock();
+         results_map[hashbasic(docString)].score += score;
+         writerLock.writeUnlock();
+
+         // close end doc for ranker
+         parser.getISRHandler().CloseISREndDoc(endDoc);
+      }
+
+      // title words
+      vector<ISRWord*> flattenTitles = parser.getFlattenedTitles();
+
+      if (!flattenTitles.empty()) {
+         for (int i = 0; i < flattenTitles.size(); i ++) {
+            flattenTitles[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
+            std::cout << "start: " << flattenTitles[i]->GetStartLocation() << std::endl;
+         }
+
+         Ranker rankerTitle((ISRWord**) flattenTitles.data(), isr->EndDoc, int(flattenTitles.size()), urlLength);
+
+         int scoreTitle = rankerTitle.rankingScore(writerLock);
+
+         writerLock.writeLock();
+         results_map[hashbasic(docString)].score += scoreTitle * 10;
+         writerLock.writeUnlock();
+      }
+
+      writerLock.writeLock();
+      results_map[hashbasic(docString)].url = docString;
+      writerLock.writeUnlock();
+
+   }
+}
+
+
 // search query in a specific chunk
 void* searchChunk(void *args) {
 
@@ -144,16 +214,19 @@ void* searchChunk(void *args) {
    //    std::cout << "doc: " << readHandler.getDocument(i)->c_str() << std::endl;
    // }
 
+   QueryParser parser(input);
+   parser.SetIndexReadHandler(fname);
+   getRankScoreQueryCompiler(parser);
 
-   QueryDemo query(input, handler, 'h'); // TODO: search for all types
-   if (query.isInIndex()) {
-      getRankScore(query, readHandler);
-   }
+   // QueryDemo query(input, handler, 't'); // TODO: search for all types
+   // if (query.isInIndex()) {
+   //    getRankScore(query, readHandler);
+   // }
 
-   QueryDemo query_b(input, handler, 'b'); // TODO: search for all types
-   if (query_b.isInIndex()) {
-      getRankScore(query_b, readHandler);
-   }
+   // QueryDemo query_b(input, handler, 'b'); // TODO: search for all types
+   // if (query_b.isInIndex()) {
+   //    getRankScore(query_b, readHandler);
+   // }
 
    return nullptr;
 }
@@ -173,32 +246,29 @@ vector<string> getResults( string searchString ) {
 
    // multiple threads for chunks
 
-   vector<pthread_t> threads(100);
-   vector<SearchArgs> argList(100);
+   // vector<pthread_t> threads(100);
+   // vector<SearchArgs> argList(100);
 
-   int i = 0;
-   for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
-      string filename(entry.path().c_str());
-      std::cout << entry.path() << std::endl;
+   // int i = 0;
+   // for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
+   //    string filename(entry.path().c_str());
+   //    std::cout << entry.path() << std::endl;
 
-      argList[i] = {filename, searchString};
-      pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
-      i ++;
-   }
-
-   // for (int i = 0; i < 10; i ++) {
-   //    string filename = (string)"../log/chunks/" + to_string(101 + i);
-   //    // string filename = (string)"../log/8";
-   //    std::cout << filename << std::endl;
    //    argList[i] = {filename, searchString};
-
    //    pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
+   //    i ++;
    // }
 
+   string filename ="../log/chunks/30";
+   pthread_t thread;
+   SearchArgs args = {filename, searchString};
+   pthread_create(&thread, nullptr, searchChunk, &args);
 
-   for (int j = 0; j < i; j ++) {
-      pthread_join(threads[j], nullptr);
-   }
+   // for (int j = 0; j < i; j ++) {
+   //    pthread_join(threads[j], nullptr);
+   // }
+
+   pthread_join(thread, nullptr);
 
    // sort top 10 results
    vector<Result> sorted_results;
@@ -224,12 +294,12 @@ vector<string> getResults( string searchString ) {
 }
 
 
-// int main() {
-//    string str = "university of michigan";
-//    vector<string> urls = getResults(str);
+int main() {
+   string str = "university michigan";
+   vector<string> urls = getResults(str);
 
 
-//    for (int i = 0; i < urls.size(); i ++) {
-//       std::cout << urls[i] << std::endl;
-//    }
-// }
+   for (int i = 0; i < urls.size(); i ++) {
+      std::cout << urls[i] << std::endl;
+   }
+}
