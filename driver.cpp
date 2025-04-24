@@ -244,12 +244,12 @@ vector<string> getResults( string searchString ) {
 }
 
 
-int main() {
-   string str = "university michigan";
-   vector<string> urls = getResults(str);
+// int main() {
+//    string str = "university michigan";
+//    vector<string> urls = getResults(str);
 
 
-   for (int i = 0; i < urls.size(); i ++) {
-      std::cout << urls[i] << std::endl;
-   }
-}
+//    for (int i = 0; i < urls.size(); i ++) {
+//       std::cout << urls[i] << std::endl;
+//    }
+// }
