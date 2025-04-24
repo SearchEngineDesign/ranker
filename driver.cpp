@@ -91,7 +91,7 @@ struct SearchArgs {
 
 
 void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
-   ISR *isr = query.getISRAnd();
+   ISR *isr = query.getISROr();
 
    size_t target = 0;
 
@@ -246,29 +246,29 @@ vector<string> getResults( string searchString ) {
 
    // multiple threads for chunks
 
-   // vector<pthread_t> threads(100);
-   // vector<SearchArgs> argList(100);
+   vector<pthread_t> threads(100);
+   vector<SearchArgs> argList(100);
 
-   // int i = 0;
-   // for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
-   //    string filename(entry.path().c_str());
-   //    std::cout << entry.path() << std::endl;
+   int i = 0;
+   for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
+      string filename(entry.path().c_str());
+      std::cout << entry.path() << std::endl;
 
-   //    argList[i] = {filename, searchString};
-   //    pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
-   //    i ++;
-   // }
+      argList[i] = {filename, searchString};
+      pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
+      i ++;
+   }
 
-   string filename ="../log/chunks/30";
-   pthread_t thread;
-   SearchArgs args = {filename, searchString};
-   pthread_create(&thread, nullptr, searchChunk, &args);
+   // string filename ="../log/chunks/30";
+   // pthread_t thread;
+   // SearchArgs args = {filename, searchString};
+   // pthread_create(&thread, nullptr, searchChunk, &args);
 
-   // for (int j = 0; j < i; j ++) {
-   //    pthread_join(threads[j], nullptr);
-   // }
+   for (int j = 0; j < i; j ++) {
+      pthread_join(threads[j], nullptr);
+   }
 
-   pthread_join(thread, nullptr);
+   // pthread_join(thread, nullptr);
 
    // sort top 10 results
    vector<Result> sorted_results;
@@ -294,12 +294,12 @@ vector<string> getResults( string searchString ) {
 }
 
 
-int main() {
-   string str = "university michigan";
-   vector<string> urls = getResults(str);
+// int main() {
+//    string str = "shanghai china";
+//    vector<string> urls = getResults(str);
 
 
-   for (int i = 0; i < urls.size(); i ++) {
-      std::cout << urls[i] << std::endl;
-   }
-}
+//    for (int i = 0; i < urls.size(); i ++) {
+//       std::cout << urls[i] << std::endl;
+//    }
+// }
