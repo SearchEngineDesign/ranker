@@ -14,7 +14,7 @@
 #include <ostream>
 #include <pthread.h>
 
-const uint8_t NUM_DRIVERS = 32;
+const uint8_t NUM_DRIVERS = 128;
 
 static size_t hashbasic(const char *c) 
    {
