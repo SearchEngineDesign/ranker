@@ -38,9 +38,7 @@ private:
 
    ISRWord **words;  // flatten query words; TODO: seek to the beginning of the matching doc
    ISREndDoc *endDoc;  // endDoc pointing to the matching doc; TODO: seek to the matching doc
-   int numWords;
-
-   size_t urlLength;    
+   int numWords; 
 
    size_t distance( Location loc1, Location loc2 );  // return distance between loc1 and loc2
 
@@ -55,10 +53,12 @@ private:
    const unsigned int MaxShortTitle = 20, MinNiceDocLength = 500, MaxNiceDocLength = 2000, MaxShortUrl = 20;  
 
    // static heuristic
+   size_t urlLength = 0, docLength = 0;   
    int shortTitleWeight = 0, docLengthWeight = 0, shortUrlWeight = 0;  
 
    // dynamic heuristic
    unsigned int numShortSpan = 0, numInOrderSpan = 0, numExactPhrase = 0, numTopSpan = 0, numMostWordFreq = 0;
+   float percentWordFreq = 0.0;
    int shortSpanWeight = 2, inOrderSpanWeight = 3, exactPhraseWeight = 5, topSpanWeight = 3, mostWordFreqWeight = 3;
 
    // static & dynamic weight

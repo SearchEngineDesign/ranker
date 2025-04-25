@@ -12,7 +12,8 @@ void Ranker::rarestWord( )
    {
    // find locations of matching doc
    docEnd = endDoc->GetStartLocation( );  
-   docBegin = docEnd - endDoc->GetDocumentLength( );  
+   docLength = endDoc->GetDocumentLength( );  
+   docBegin = docEnd - docLength;  
 
    // number of frequent word
    int numFreqWord = 0;  
@@ -43,7 +44,8 @@ void Ranker::rarestWord( )
       }
 
    // increment numMostWordFreq
-   if ( ( float ) numFreqWord / numWords >= MinRatioToBeMost )
+   percentWordFreq = ( float ) numFreqWord / numWords;  
+   if ( percentWordFreq >= MinRatioToBeMost )
       numMostWordFreq ++;
    
 
@@ -158,7 +160,6 @@ int Ranker::dynamicScore( )
 int Ranker::staticScore( )
    {
    int isNiceDocLength, isShortUrl = 0;  
-   size_t docLength = docEnd - docBegin;
    // isShortTitle = endDoc->GetTitleLength( ) <= MaxShortTitle ? 1 : 0;  
    isNiceDocLength = ( docLength >= MinNiceDocLength && docLength <= MaxNiceDocLength ) ? 1 : 0;  
    isShortUrl = ( urlLength <= MaxShortUrl ) ? 1 : 0;  
