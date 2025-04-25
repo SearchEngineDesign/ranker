@@ -23,53 +23,52 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
 
       std::cout << "matching doc: " << isr ->GetMatchingDoc() << " " << parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
       const char * docString = parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str();
-      
+      if (results_map.find(hashbasic(docString)) == results_map.end()) {
+         string url(docString);
+         size_t urlLength = url.length();
+
+         int score = 0;
+
+         // title words
+         vector<ISRWord*> flattenTitles = parser.getFlattenedTitles();
+
+         if (!flattenTitles.empty()) {
+            for (int i = 0; i < flattenTitles.size(); i ++) {
+               flattenTitles[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
+               std::cout << "start: " << flattenTitles[i]->GetStartLocation() << std::endl;
+            }
+
+            Ranker rankerTitle((ISRWord**) flattenTitles.data(), isr->EndDoc, int(flattenTitles.size()), urlLength);
+
+            int scoreTitle = rankerTitle.rankingScore();
+
+            score += scoreTitle * 10;
+
+            // TODO: change this back? this is so we only have to compute body if we have a match in title
+            vector<ISRWord*> flatten = parser.getFlattenedWords();
+            if (!flatten.empty()) {
+               for (int i = 0; i < flatten.size(); i ++) {
+                  flatten[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
+               }
+
+               // new end doc for ranker
+               ISREndDoc *endDoc = parser.getISRHandler().OpenISREndDoc();
+               endDoc->Seek(isr->EndDoc->GetStartLocation());
+
+               Ranker ranker((ISRWord**) flatten.data(), endDoc, int(flatten.size()), urlLength);
+
+               score += ranker.rankingScore();
+
+               // close end doc for ranker
+               parser.getISRHandler().CloseISREndDoc(endDoc);
+            }
+         }
+
+         WithWriteLock withWriteLock(writerLock);
+         results_map[hashbasic(docString)] = {score, docString};
+      }
+
       target = isr->EndDoc->GetStartLocation() + 1;
-      // std::cout << "target: " << target << "\n";
-      
-      // for url length
-      string url(docString);
-      size_t urlLength = url.length();
-
-      int score = 0;
-
-      // body words
-      vector<ISRWord*> flatten = parser.getFlattenedWords();
-      if (!flatten.empty()) {
-         for (int i = 0; i < flatten.size(); i ++) {
-            flatten[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
-         }
-
-         // new end doc for ranker
-         ISREndDoc *endDoc = parser.getISRHandler().OpenISREndDoc();
-         endDoc->Seek(isr->EndDoc->GetStartLocation());
-
-         Ranker ranker((ISRWord**) flatten.data(), endDoc, int(flatten.size()), urlLength);
-
-         score += ranker.rankingScore();
-
-         // close end doc for ranker
-         parser.getISRHandler().CloseISREndDoc(endDoc);
-      }
-
-      // title words
-      vector<ISRWord*> flattenTitles = parser.getFlattenedTitles();
-
-      if (!flattenTitles.empty()) {
-         for (int i = 0; i < flattenTitles.size(); i ++) {
-            flattenTitles[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
-            std::cout << "start: " << flattenTitles[i]->GetStartLocation() << std::endl;
-         }
-
-         Ranker rankerTitle((ISRWord**) flattenTitles.data(), isr->EndDoc, int(flattenTitles.size()), urlLength);
-
-         int scoreTitle = rankerTitle.rankingScore();
-
-         score += scoreTitle * 10;
-      }
-
-      WithWriteLock withWriteLock(writerLock);
-      results_map[hashbasic(docString)] = {score, docString};
    }
 }
 
@@ -117,21 +116,14 @@ vector<string> getResults( string searchString ) {
 
    int i = 0;
    for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
-      std::cout << entry.path() << std::endl;
       string filename(entry.path().filename().c_str());
-      bool digit = true;
-      for (int i = 0; i < filename.size(); i++)
-         if (!std::isdigit(filename[i]))
-            digit = false;
-      if (digit) {
-         int driverID = atoi(filename.c_str()) % NUM_DRIVERS;
-         std::cout << "chunk: " << entry.path() << ", driver: " << driverID << std::endl;
+      int driverID = i % NUM_DRIVERS;
+      std::cout << "chunk: " << entry.path() << ", driver: " << driverID << std::endl;
 
-         argList[i] = {string(entry.path().c_str()), searchString, &drivers[driverID]};
-         pthread_t thread;
-         pthread_create(&thread, nullptr, startDriver, &argList[i]);
-         threads.push_back(thread);
-      }
+      argList[i] = {string(entry.path().c_str()), searchString, &drivers[driverID]};
+      pthread_t thread;
+      pthread_create(&thread, nullptr, startDriver, &argList[i]);
+      threads.push_back(thread);
       ++i;
    }
 
@@ -143,9 +135,13 @@ vector<string> getResults( string searchString ) {
 
    // sort top 10 results
    vector<Result> sorted_results;
+   std::unordered_set<size_t> duplicates;
    for (auto &d : drivers) {
       for (const auto& pair : d.results_map) {
-         sorted_results.push_back({pair.second.score, pair.second.url});
+         if (duplicates.find(pair.first) == duplicates.end()) {
+            sorted_results.push_back({pair.second.score, pair.second.url});
+            duplicates.insert(pair.first);
+         }
       }
    }
 

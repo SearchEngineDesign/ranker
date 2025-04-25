@@ -7,6 +7,7 @@
 #include "../index/index.h"
 #include "../isr/isrHandler.h"
 #include <unordered_map>
+#include <unordered_set>
 #include "../queryCompiler/compiler.h"
 #include <filesystem>
 #include <cstddef>
