@@ -24,7 +24,7 @@ public:
    int staticScore( );  // calculate static score
    int dynamicScore( );  // calculate dynamic score; TODO: title, url, head, body
 
-   int rankingScore( ReaderWriterLock & writerLock );  // run functions and return the ranking score of the matching doc
+   int rankingScore( );  // run functions and return the ranking score of the matching doc
 
    vector<unsigned int> getHeuristics( );
 

@@ -6,195 +6,26 @@
 #include "../isr/isr.h"
 #include "../index/index.h"
 #include "../isr/isrHandler.h"
+#include <unordered_map>
+#include "../queryCompiler/compiler.h"
+#include <filesystem>
+#include <cstddef>
+#include "../frontier/ReaderWriterLock.h"
+#include <ostream>
+#include <pthread.h>
 
+const uint8_t NUM_DRIVERS = 12;
 
-class QueryDemo 
-{
-public:
-   QueryDemo() {}
-
-   QueryDemo(string& input, ISRHandler & isrHandler, char t) {
-      handler = isrHandler;
-      // split input into tokens (e.g. input = "quick brown fox")
-
-      string word;
-
-      type = t;
-
-      switch (type) {
-         case 't':
-            word = "@";
-            break;
-         case 'h':
-            word = "<";
-            break;
-         case 'b':
-            word = "";
-            break;
-         default:
-            word = "";
-            break;
+static size_t hashbasic(const char *c) 
+   {
+      unsigned long hash = fnvOffset;
+      while (*c) {
+         hash *= fnvPrime;
+         hash ^= (*c);
+         c++;
       }
-
-      for ( int i = 0; i < input.length(); i ++ ) {
-         char c = input[i];
-         if ( c == ' ' ) {
-            switch (type) {
-               case 'b':
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "";
-                  }
-                  break;
-               case 'h':
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "<";
-                  }
-                  break;
-               case 't':
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "@";
-                  }
-                  break;
-               default:
-                  if ( !word.empty()) {
-                     tokens.push_back(word);
-                     word = "";
-                  }
-                  break;
-            }
-            
-         }
-         else {
-            word.push_back(c);
-         }
-      }
-      if ( !word.empty() || word != "@" || word != "<" )
-         tokens.push_back(word);
-
-      if (tokens.empty()) {
-         inIndex = false;
-         return;
-      }
-
-      for (int i = 0; i < tokens.size(); i ++)
-         std::cout << "token: " << tokens[i].c_str() << std::endl;
-
-
-      // initialize isrword
-      for (int i = 0; i < tokens.size(); i ++) {
-         ISRWord *isrWord = handler.OpenISRWord( tokens[i].data() );
-         // ISRWord *isrWordFlatten = handler.OpenISRWord( tokens[i].data() );
-         if (isrWord != nullptr) {
-            terms.push_back(isrWord);
-            // flattenTerms.push_back(isrWordFlatten);
-         }
-      }
-      if (terms.empty())
-         inIndex = false;
-      else if (terms.size() > 1){
-         isrAnd = handler.OpenISRAnd(terms.data(), terms.size());
-         if (isrAnd != nullptr)
-            inIndex = true;
-
-         isrPhrase = handler.OpenISRPhrase(terms.data(), terms.size());
-         if (isrPhrase != nullptr)
-            inIndex = true;
-
-         isrOr = handler.OpenISROr(terms.data(), terms.size());
-         if (isrOr != nullptr)
-            inIndex = true;
-      }
-      else {
-         inIndex = true;
-      }
-
+      return hash % initialSize;
    }
-
-   ~QueryDemo() {
-      for (int i = 0; i < terms.size(); i ++) {
-         handler.CloseISR(terms[i]);
-         // handler.CloseISR(flattenTerms[i]);
-      }
-      if (isrAnd != nullptr)
-         handler.CloseISR(isrAnd);
-      if (isrPhrase != nullptr)
-         handler.CloseISR(isrPhrase);
-      if (isrOr != nullptr)
-         handler.CloseISR(isrOr);
-   }
-
-   // return whether words are in index
-   bool isInIndex() {
-      return inIndex;
-   }
-
-   // flattened query
-   ISR **flatQuery(size_t target) {
-      // for (int i = 0; i < flattenTerms.size(); i ++) {
-      //    flattenTerms[i]->Seek(target);
-      // }
-      // return flattenTerms.data();
-      return terms.data();
-   }
-
-   // isr to word or isr to And word
-   ISR *getISRAnd() {
-      if (terms.size() == 1) {
-         return terms[0];
-      }
-      else {
-         return isrAnd;
-      }
-   }
-
-   // isr to word or isr to Or
-   ISR *getISROr() {
-      if (terms.size() == 1) {
-         return terms[0];
-      }
-      else {
-         return isrOr;
-      }
-   }
-
-   // isr to word or isr to phrase
-   ISR *getISRPhrase() {
-      if (terms.size() == 1) {
-         return terms[0];
-      }
-      else {
-         return isrPhrase;
-      }
-   }
-
-   int getNumWords() {
-      return terms.size();
-   }
-
-   char getType() {
-      return type;
-   }
-
-   ISRHandler handler; // one handler for one index chunk
-
-private:
-
-   vector<string> tokens;
-
-   vector<ISR*> terms;
-
-   char type;
-
-   // vector<ISR*> flattenTerms; // TODO: protect
-   ISRAnd *isrAnd = nullptr;
-   ISRPhrase *isrPhrase = nullptr;
-   ISROr *isrOr = nullptr;
-   bool inIndex = false;
-};
-
 
 struct Result {
    int score;
@@ -207,6 +38,40 @@ struct Result {
 
 vector<string> getResults( string searchString );
 
+class Driver {
+public:
+
+   static bool compareResults(const Result& a, const Result& b) {
+      return a.score > b.score;
+   }
+
+   void* searchChunk(void *args);
+   std::unordered_map<size_t, Result> results_map;
+
+private:
+   void getRankScoreQueryCompiler(QueryParser & parser);
+
+   ReaderWriterLock writerLock;
+
+};
 
 
 
+struct SearchArgs {
+   string fname;  // File name
+   string input; // Input string to search
+   Driver *d;
+
+   // Custom copy assignment operator
+   SearchArgs() : fname(""), input(""), d(nullptr) {};
+   SearchArgs(const string &fname_in, const string &input_in, Driver *d_in) 
+            : fname(fname_in), input(input_in), d(d_in) {}
+   SearchArgs& operator=(const SearchArgs& other) {
+      if (this != &other) {
+         fname = other.fname;
+         input = other.input;
+         d = other.d;
+      }
+      return *this;
+   }
+};

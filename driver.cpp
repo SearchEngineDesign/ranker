@@ -1,12 +1,5 @@
 
-#include <cstddef>
-#include "../frontier/ReaderWriterLock.h"
-#include <ostream>
-#include <pthread.h>
 #include "driver.h"
-#include <filesystem>
-#include <unordered_map>
-#include "../queryCompiler/compiler.h"
 
 // TODO: can we use unordered_map
 
@@ -17,81 +10,8 @@
 
 // vector<Result> results;
 
-static size_t hashbasic(const char *c) 
-   {
-      unsigned long hash = fnvOffset;
-      while (*c) {
-         hash *= fnvPrime;
-         hash ^= (*c);
-         c++;
-      }
-      return hash % initialSize;
-   }
 
-std::unordered_map<size_t, Result> results_map;
-
-ReaderWriterLock writerLock;
-
-
-bool compareResults(const Result& a, const Result& b) {
-   return a.score > b.score;
-}
-
-
-struct SearchArgs {
-   string fname;  // File name
-   string input; // Input string to search
-
-   // Custom copy assignment operator
-   SearchArgs& operator=(const SearchArgs& other) {
-      if (this != &other) {
-         fname = other.fname;
-         input = other.input;
-      }
-      return *this;
-   }
-};
-
-// // for QueryDemo
-// void getRankScore(QueryDemo & query, IndexReadHandler & readHandler) {
-//    ISR *isr = query.getISRAnd();
-
-//    size_t target = 0;
-
-//    while (isr->Seek(target) != nullptr) {
-
-//       std::cout << "matching doc: " << isr ->GetMatchingDoc() << std::endl;
-//       const char * docString = readHandler.getDocument(isr ->GetMatchingDoc())->c_str();
-      
-//       // writerLock.writeLock();
-//       // urls.push_back(readHandler.getDocument(isr ->GetMatchingDoc())->c_str());
-//       // writerLock.writeUnlock();
-//       target = isr->EndDoc->GetStartLocation() + 1;
-//       // std::cout << "target: " << target << "\n";
-      
-//       // for url length
-//       string url(docString);
-//       size_t urlLength = url.length();
-
-//       Ranker ranker((ISRWord **)query.flatQuery(target), isr->EndDoc, query.getNumWords(), urlLength);
-
-//       int score = ranker.rankingScore(writerLock);
-
-//       WithWriteLock withWriteLock(writerLock);
-//       // scores.push_back(score);
-
-//       // results.push_back({score, docString});
-//       if (query.getType() == 't')
-//          results_map[hashbasic(docString)].score += score * 10;
-//       else
-//          results_map[hashbasic(docString)].score += score;
-//       results_map[hashbasic(docString)].url = docString;
-
-//    }
-// }
-
-
-void getRankScoreQueryCompiler(QueryParser & parser) {
+void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
    ISR *isr = parser.compile();
 
    if (isr == nullptr)
@@ -126,7 +46,7 @@ void getRankScoreQueryCompiler(QueryParser & parser) {
 
          Ranker ranker((ISRWord**) flatten.data(), endDoc, int(flatten.size()), urlLength);
 
-         score += ranker.rankingScore(writerLock);
+         score += ranker.rankingScore();
 
          // close end doc for ranker
          parser.getISRHandler().CloseISREndDoc(endDoc);
@@ -143,21 +63,19 @@ void getRankScoreQueryCompiler(QueryParser & parser) {
 
          Ranker rankerTitle((ISRWord**) flattenTitles.data(), isr->EndDoc, int(flattenTitles.size()), urlLength);
 
-         int scoreTitle = rankerTitle.rankingScore(writerLock);
+         int scoreTitle = rankerTitle.rankingScore();
 
          score += scoreTitle * 10;
       }
 
       WithWriteLock withWriteLock(writerLock);
       results_map[hashbasic(docString)] = {score, docString};
-      // results.push_back({score, docString});
-
    }
 }
 
 
 // search query in a specific chunk
-void* searchChunk(void *args) {
+void* Driver::searchChunk(void *args) {
 
    SearchArgs* searchArgs = static_cast<SearchArgs*>(args);
 
@@ -174,60 +92,64 @@ void* searchChunk(void *args) {
    parser.SetIndexReadHandler(fname);
    getRankScoreQueryCompiler(parser);
 
-   // QueryDemo query(input, handler, 't'); 
-   // if (query.isInIndex()) {
-   //    getRankScore(query, readHandler);
-   // }
-
-   // QueryDemo query_b(input, handler, 'b'); 
-   // if (query_b.isInIndex()) {
-   //    getRankScore(query_b, readHandler);
-   // }
-
    return nullptr;
 }
 
-
+void* startDriver(void *args) {
+   SearchArgs* searchArgs = static_cast<SearchArgs*>(args);
+   if (searchArgs->d != nullptr) 
+      searchArgs->d->searchChunk(args);
+}
 
 // input a search query (searchString), return a vector of urls
 vector<string> getResults( string searchString ) {
 
-
+   Driver drivers[NUM_DRIVERS];
    
-   const char *CHUNK_DIR = "../log/chunks";
-   results_map.clear();
+   //results_map.clear();
 
    int chunkCount = 0;
-   for (auto& p : std::filesystem::directory_iterator(CHUNK_DIR))
+   for (auto& p : std::filesystem::directory_iterator("../log/chunksgoogle"))
       ++chunkCount;
 
-   vector<pthread_t> threads(chunkCount);
-   vector<SearchArgs> argList(chunkCount);
+   vector<pthread_t> threads;
+   SearchArgs argList[chunkCount];
 
    int i = 0;
-   for (const auto& entry : std::filesystem::directory_iterator(CHUNK_DIR)) {
-      string filename(entry.path().c_str());
+   for (const auto& entry : std::filesystem::directory_iterator("../log/chunksgoogle")) {
       std::cout << entry.path() << std::endl;
+      string filename(entry.path().filename().c_str());
+      bool digit = true;
+      for (int i = 0; i < filename.size(); i++)
+         if (!std::isdigit(filename[i]))
+            digit = false;
+      if (digit) {
+         int driverID = atoi(filename.c_str()) % NUM_DRIVERS;
+         std::cout << "chunk: " << entry.path() << ", driver: " << driverID << std::endl;
 
-      argList[i] = {filename, searchString};
-      pthread_create(&threads[i], nullptr, searchChunk, &argList[i]);
+         argList[i] = {string(entry.path().c_str()), searchString, &drivers[driverID]};
+         pthread_t thread;
+         pthread_create(&thread, nullptr, startDriver, &argList[i]);
+         threads.push_back(thread);
+      }
       ++i;
    }
 
-   for (int j = 0; j < i; j ++) {
-      pthread_join(threads[j], nullptr);
+   for (pthread_t &thread : threads) {
+      pthread_join(thread, nullptr);
    }
+      
 
-
-   // pthread_join(thread, nullptr);
 
    // sort top 10 results
    vector<Result> sorted_results;
-   for (const auto& pair : results_map) {
-      sorted_results.push_back({pair.second.score, pair.second.url});
+   for (auto &d : drivers) {
+      for (const auto& pair : d.results_map) {
+         sorted_results.push_back({pair.second.score, pair.second.url});
+      }
    }
 
-   std::sort(sorted_results.begin(), sorted_results.end(), compareResults);
+   std::sort(sorted_results.begin(), sorted_results.end(), Driver::compareResults);
 
    for (int i = 0; i < sorted_results.size(); i ++) {
       sorted_results[i].print();
@@ -243,16 +165,3 @@ vector<string> getResults( string searchString ) {
    return top10Urls;
 
 }
-
-
-// int main() {
-
-//    string str = "my search engine";
-
-//    vector<string> urls = getResults(str);
-
-
-//    for (int i = 0; i < urls.size(); i ++) {
-//       std::cout << urls[i] << std::endl;
-//    }
-// }

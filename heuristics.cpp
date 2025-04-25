@@ -168,7 +168,7 @@ int Ranker::staticScore( )
    }
 
 
-int Ranker::rankingScore( ReaderWriterLock & writerLock )
+int Ranker::rankingScore( )
    {
    rarestWord( );  
    forward( );  
