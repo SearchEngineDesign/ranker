@@ -79,9 +79,10 @@ void* Driver::searchChunk(void *args) {
 
    SearchArgs* searchArgs = static_cast<SearchArgs*>(args);
 
-   const char* fname = searchArgs->fname.cstr();
+   const char* fname = searchArgs->fname.c_str();
    string input = searchArgs->input;
 
+   // MAKE SURE THIS GETS CLEANED UP!
    IndexReadHandler readHandler = IndexReadHandler();
    readHandler.ReadIndex(fname);
    ISRHandler handler;
@@ -99,24 +100,23 @@ void* startDriver(void *args) {
    SearchArgs* searchArgs = static_cast<SearchArgs*>(args);
    if (searchArgs->d != nullptr) 
       searchArgs->d->searchChunk(args);
+   return nullptr;
 }
 
 // input a search query (searchString), return a vector of urls
 vector<string> getResults( string searchString ) {
 
    Driver drivers[NUM_DRIVERS];
-   
-   //results_map.clear();
 
    int chunkCount = 0;
-   for (auto& p : std::filesystem::directory_iterator("../log/chunksgoogle"))
+   for (auto& p : std::filesystem::directory_iterator("../log/chunks"))
       ++chunkCount;
 
    vector<pthread_t> threads;
    SearchArgs argList[chunkCount];
 
    int i = 0;
-   for (const auto& entry : std::filesystem::directory_iterator("../log/chunksgoogle")) {
+   for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
       std::cout << entry.path() << std::endl;
       string filename(entry.path().filename().c_str());
       bool digit = true;
