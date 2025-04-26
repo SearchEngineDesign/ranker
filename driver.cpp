@@ -29,9 +29,27 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
 
          int score = 0;
 
+         // body words
+         vector<ISRWord*> flatten = parser.getFlattenedWords();
+         if (!flatten.empty()) {
+            for (int i = 0; i < flatten.size(); i ++) {
+               flatten[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
+            }
+
+            // new end doc for ranker
+            ISREndDoc *endDoc = parser.getISRHandler().OpenISREndDoc();
+            endDoc->Seek(isr->EndDoc->GetStartLocation());
+
+            Ranker ranker((ISRWord**) flatten.data(), endDoc, int(flatten.size()), urlLength);
+
+            score += ranker.rankingScore();
+
+            // close end doc for ranker
+            parser.getISRHandler().CloseISREndDoc(endDoc);
+         }
+
          // title words
          vector<ISRWord*> flattenTitles = parser.getFlattenedTitles();
-
          if (!flattenTitles.empty()) {
             for (int i = 0; i < flattenTitles.size(); i ++) {
                flattenTitles[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
@@ -43,25 +61,6 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
             int scoreTitle = rankerTitle.rankingScore();
 
             score += scoreTitle * 10;
-
-            // TODO: change this back? this is so we only have to compute body if we have a match in title
-            vector<ISRWord*> flatten = parser.getFlattenedWords();
-            if (!flatten.empty()) {
-               for (int i = 0; i < flatten.size(); i ++) {
-                  flatten[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
-               }
-
-               // new end doc for ranker
-               ISREndDoc *endDoc = parser.getISRHandler().OpenISREndDoc();
-               endDoc->Seek(isr->EndDoc->GetStartLocation());
-
-               Ranker ranker((ISRWord**) flatten.data(), endDoc, int(flatten.size()), urlLength);
-
-               score += ranker.rankingScore();
-
-               // close end doc for ranker
-               parser.getISRHandler().CloseISREndDoc(endDoc);
-            }
          }
 
          WithWriteLock withWriteLock(writerLock);
