@@ -13,6 +13,7 @@
 #include <cstddef>
 #include "../frontier/ReaderWriterLock.h"
 #include <ostream>
+#include <stdio.h>
 #include <pthread.h>
 
 const uint8_t NUM_DRIVERS = 128;
@@ -37,7 +38,7 @@ struct Result {
    }
 };
 
-vector<string> getResults( string searchString );
+string getResults( string searchString );
 
 class Driver {
 public:

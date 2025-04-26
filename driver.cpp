@@ -102,7 +102,7 @@ void* startDriver(void *args) {
 }
 
 // input a search query (searchString), return a vector of urls
-vector<string> getResults( string searchString ) {
+string getResults( string searchString ) {
 
    Driver drivers[NUM_DRIVERS];
 
@@ -151,12 +151,10 @@ vector<string> getResults( string searchString ) {
    }
 
    // Extract the top 10 URLs
-   vector<string> top10Urls;
-   for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i) {
-      top10Urls.push_back(sorted_results[i].url);
-      // std::cout << "score: " << results[i].score << std::endl;
-   }
+   string buf;
+   for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i)
+      buf += sorted_results[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
 
-   return top10Urls;
+   return buf;
 
 }
