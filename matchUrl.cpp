@@ -1,6 +1,6 @@
 #include <regex>
-#include "../utils/searchstring.h"
-#include "../utils/vector.h"
+#include <cf/searchstring.h>
+#include <cf/vec.h>
 
 // tokenize a URL
 

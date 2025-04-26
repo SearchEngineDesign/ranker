@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../utils/searchstring.h"
-#include "../utils/vector.h"
+#include <cf/searchstring.h>
+#include <cf/vec.h>
 #include "heuristics.h"
 #include "../isr/isr.h"
 #include "../index/index.h"
