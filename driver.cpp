@@ -21,7 +21,7 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
 
    while (isr->Seek(target) != nullptr) {
 
-      std::cout << "matching doc: " << isr ->GetMatchingDoc() << " " << parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
+      //std::cout << "matching doc: " << isr ->GetMatchingDoc() << " " << parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
       const char * docString = parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str();
       if (results_map.find(hashbasic(docString)) == results_map.end()) {
          string url(docString);
@@ -53,7 +53,7 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
          if (!flattenTitles.empty()) {
             for (int i = 0; i < flattenTitles.size(); i ++) {
                flattenTitles[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
-               std::cout << "start: " << flattenTitles[i]->GetStartLocation() << std::endl;
+               //std::cout << "start: " << flattenTitles[i]->GetStartLocation() << std::endl;
             }
 
             Ranker rankerTitle((ISRWord**) flattenTitles.data(), isr->EndDoc, int(flattenTitles.size()), urlLength);
@@ -117,7 +117,7 @@ string getResults( string searchString ) {
    for (const auto& entry : std::filesystem::directory_iterator("../log/chunks")) {
       string filename(entry.path().filename().c_str());
       int driverID = i % NUM_DRIVERS;
-      std::cout << "chunk: " << entry.path() << ", driver: " << driverID << std::endl;
+      //std::cout << "chunk: " << entry.path() << ", driver: " << driverID << std::endl;
 
       argList[i] = {string(entry.path().c_str()), searchString, &drivers[driverID]};
       pthread_t thread;
@@ -125,7 +125,6 @@ string getResults( string searchString ) {
       threads.push_back(thread);
       ++i;
    }
-
    for (pthread_t &thread : threads) {
       pthread_join(thread, nullptr);
    }
