@@ -13,6 +13,7 @@
 #include "../frontier/ReaderWriterLock.h"
 #include <ostream>
 #include <pthread.h>
+#include "matchUrl.h"
 
 const uint8_t NUM_DRIVERS = 128;
 
@@ -31,12 +32,18 @@ struct Result {
    int score;
    string url;
 
+   // for dataset
+   std::pair<unsigned int, unsigned int> numShortSpan, numInOrderSpan, numExactPhrase, numTopSpan;
+   std::pair<float, float> percentFreqWords;
+   size_t urlLength, docLength; 
+   int numMatchUrl;
+
    void print() const {
       std::cout << "Score: " << score << ", URL: " << url << std::endl;
    }
 };
 
-vector<string> getResults( string searchString );
+vector<Result> getResults( string searchString ); // TODO: change back to string
 
 class Driver {
 public:
@@ -49,7 +56,7 @@ public:
    std::unordered_map<size_t, Result> results_map;
 
 private:
-   void getRankScoreQueryCompiler(QueryParser & parser);
+   void getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type); // TODO: remove input when query compiler fixed
 
    ReaderWriterLock writerLock;
 

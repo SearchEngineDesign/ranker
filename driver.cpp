@@ -1,21 +1,20 @@
 
 #include "driver.h"
+#include "matchUrl.h"
 
-// TODO: can we use unordered_map
-
-// vector<unsigned int> shortSpans, inOrderSpans, exactPharses, topSpans, freq;
-
-// vector<int> scores;
-// vector<string> urls;
-
-// vector<Result> results;
+// TODO: can we use unordered_map; BUG: map will give duplicates more scores
 
 
-void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
+void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type) {
    ISR *isr = parser.compile();
 
    if (isr == nullptr)
       return;
+
+   // get token strings from query
+   // vector<string> tokens = parser.getTokenStrings(); // TODO: this func doesn't work
+
+   vector<string> tokens = split(input, ' ');
 
    size_t target = 0;
 
@@ -33,8 +32,22 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
 
       int score = 0;
 
-      // body words
-      vector<ISRWord*> flatten = parser.getFlattenedWords();
+      // for dataset
+      unsigned int numShortSpan, numInOrderSpan, numExactPhrase, numTopSpan;
+      float percentFreqWords;
+      size_t docLength; 
+
+      // if body words
+      vector<ISRWord*> flatten;
+      int weight = 1;
+      if (type == 'b') {
+         flatten = parser.getFlattenedWords();
+      }
+      else if (type == 't') {
+         flatten = parser.getFlattenedTitles();
+         weight = 5;
+      }
+
       if (!flatten.empty()) {
          for (int i = 0; i < flatten.size(); i ++) {
             flatten[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
@@ -46,30 +59,67 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser) {
 
          Ranker ranker((ISRWord**) flatten.data(), endDoc, int(flatten.size()), urlLength);
 
-         score += ranker.rankingScore();
+         score += ranker.rankingScore() * weight;
+
+         // for dataset
+         numShortSpan = ranker.getNumShortSpan();
+         numInOrderSpan = ranker.getNumInOrderSpan();
+         numExactPhrase = ranker.getNumExactPhrase();
+         numTopSpan = ranker.getNumTopSpan();
+         percentFreqWords = ranker.getPercentWordFreq();
+         docLength = ranker.getDocLength();
 
          // close end doc for ranker
          parser.getISRHandler().CloseISREndDoc(endDoc);
       }
 
-      // title words
-      vector<ISRWord*> flattenTitles = parser.getFlattenedTitles();
+      // // title words
+      // vector<ISRWord*> flattenTitles = parser.getFlattenedTitles();
 
-      if (!flattenTitles.empty()) {
-         for (int i = 0; i < flattenTitles.size(); i ++) {
-            flattenTitles[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
-            std::cout << "start: " << flattenTitles[i]->GetStartLocation() << std::endl;
-         }
+      // if (!flattenTitles.empty()) {
+      //    for (int i = 0; i < flattenTitles.size(); i ++) {
+      //       flattenTitles[i]->Seek(isr->EndDoc->GetStartLocation() - isr->EndDoc->GetDocumentLength());
+      //       std::cout << "title start: " << flattenTitles[i]->GetStartLocation() << std::endl;
+      //    }
 
-         Ranker rankerTitle((ISRWord**) flattenTitles.data(), isr->EndDoc, int(flattenTitles.size()), urlLength);
+      //    Ranker rankerTitle((ISRWord**) flattenTitles.data(), isr->EndDoc, int(flattenTitles.size()), urlLength);
 
-         int scoreTitle = rankerTitle.rankingScore();
+      //    int scoreTitle = rankerTitle.rankingScore();
 
-         score += scoreTitle * 10;
-      }
+      //    // for dataset
+      //    numShortSpan.second = rankerTitle.getNumShortSpan();
+      //    numInOrderSpan.second = rankerTitle.getNumInOrderSpan();
+      //    numExactPhrase.second = rankerTitle.getNumExactPhrase();
+      //    numTopSpan.second = rankerTitle.getNumTopSpan();
+      //    percentFreqWords.second = rankerTitle.getPercentWordFreq();
+
+      //    score += scoreTitle * 5;
+      // }
+
+      // match in URL
+      int matchNum = matchCount(tokens, url);
+      int urlMatchWeight = 3;
+      score += matchNum * urlMatchWeight;
+
+      // for dataset
 
       WithWriteLock withWriteLock(writerLock);
-      results_map[hashbasic(docString)] = {score, docString};
+      // results_map[hashbasic(docString)] = {score, docString};
+      if (results_map.find(hashbasic(docString)) == results_map.end()) {
+         std::cout << "new " << type << "\n";
+         results_map[hashbasic(docString)] = {score, docString, {numShortSpan, 0}, {numInOrderSpan, 0}, {numExactPhrase, 0}, {numTopSpan, 0}, {percentFreqWords, 0.0}, urlLength, docLength, matchNum};
+      }
+      else {
+         std::cout << "exist " << type << "\n";
+         Result prevResult = results_map[hashbasic(docString)];
+         prevResult.score += score;
+         prevResult.numShortSpan.second = numShortSpan;
+         prevResult.numInOrderSpan.second = numInOrderSpan;
+         prevResult.numExactPhrase.second = numExactPhrase;
+         prevResult.numTopSpan.second = numTopSpan;
+         prevResult.percentFreqWords.second = percentFreqWords;
+      }
+
    }
 }
 
@@ -88,11 +138,14 @@ void* Driver::searchChunk(void *args) {
    ISRHandler handler;
    handler.SetIndexReadHandler(&readHandler);
 
-
-   QueryParser parser(input);
+   QueryParser parser(input, 'b');
    parser.SetIndexReadHandler(fname);
-   getRankScoreQueryCompiler(parser);
+   getRankScoreQueryCompiler(parser, input, 'b');
 
+   QueryParser parserTitle(input, 't');
+   parserTitle.SetIndexReadHandler(fname);
+   getRankScoreQueryCompiler(parserTitle, input, 't');
+   
    return nullptr;
 }
 
@@ -104,7 +157,7 @@ void* startDriver(void *args) {
 }
 
 // input a search query (searchString), return a vector of urls
-vector<string> getResults( string searchString ) {
+vector<Result> getResults( string searchString ) {
 
    Driver drivers[NUM_DRIVERS];
 
@@ -141,11 +194,12 @@ vector<string> getResults( string searchString ) {
       
 
 
-   // sort top 10 results
+   // sort top 50 results
    vector<Result> sorted_results;
    for (auto &d : drivers) {
       for (const auto& pair : d.results_map) {
-         sorted_results.push_back({pair.second.score, pair.second.url});
+         // sorted_results.push_back({pair.second.score, pair.second.url});
+         sorted_results.push_back(pair.second);
       }
    }
 
@@ -155,13 +209,31 @@ vector<string> getResults( string searchString ) {
       sorted_results[i].print();
    }
 
-   // Extract the top 10 URLs
-   vector<string> top10Urls;
-   for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i) {
-      top10Urls.push_back(sorted_results[i].url);
+   // // Extract the top 50 URLs
+   // vector<string> top10Urls;
+   // for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i) {
+   //    top10Urls.push_back(sorted_results[i].url);
+   //    // std::cout << "score: " << results[i].score << std::endl;
+   // }
+
+   // Extract the top 50 URLs
+   vector<Result> top50Urls;
+   for (size_t i = 0; i < std::min(static_cast<size_t>(50), sorted_results.size()); ++i) {
+      top50Urls.push_back(sorted_results[i]);
       // std::cout << "score: " << results[i].score << std::endl;
    }
 
-   return top10Urls;
+   return top50Urls;
 
 }
+
+
+// int main() {
+//    string query = "When is whale watching season in San Diego";
+//    vector<Result> results = getResults(query);
+
+//    for (int i = 0; i < results.size(); i ++) {
+//       std::cout << results[i].url << std::endl;
+//    }
+
+// }

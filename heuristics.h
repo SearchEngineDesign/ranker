@@ -32,7 +32,8 @@ public:
    unsigned int getNumInOrderSpan();
    unsigned int getNumExactPhrase();
    unsigned int getNumTopSpan();
-   unsigned int getNumMostWordFreq();
+   float getPercentWordFreq();
+   size_t getDocLength();
 
 private:
 

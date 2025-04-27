@@ -207,6 +207,10 @@ unsigned int Ranker::getNumTopSpan() {
    return numTopSpan;
 }
 
-unsigned int Ranker::getNumMostWordFreq() {
-   return numMostWordFreq;
+float Ranker::getPercentWordFreq() {
+   return percentWordFreq;
+}
+
+size_t Ranker::getDocLength() {
+   return docLength;
 }

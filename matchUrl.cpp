@@ -1,8 +1,7 @@
-#include <regex>
-#include "../utils/searchstring.h"
-#include "../utils/vector.h"
+#include "matchUrl.h"
 
 // tokenize a URL
+
 
 // normalize tokens (convert to lowercase and remove non-alphanumeric characters)
 string normalize(const string &token) {
@@ -17,12 +16,13 @@ string normalize(const string &token) {
             normalized.push_back(c);
          }
       }
-      else {
-         return normalized;
+      else { // cut characters after non-alphanumeric
+         return normalized; // normalized = "": remain characters after non-alphanumeric
       }
    }
    return normalized;
 }
+
 
 // split a string by a delimiter
 vector<string> split(const string &str, char delimiter) {
@@ -48,7 +48,6 @@ vector<string> split(const string &str, char delimiter) {
 }
 
 
-
 // split a string by delimiter and push to tokens
 void splitAdd(const string &str, char delimiter, vector<string> & tokens) {
    string token = "";
@@ -70,6 +69,7 @@ void splitAdd(const string &str, char delimiter, vector<string> & tokens) {
    }
 }
 
+
 // process domain
 void processDomain(const string &domain, vector<string> &tokens) {
    string cleanDomain = domain;
@@ -90,6 +90,8 @@ void processDomain(const string &domain, vector<string> &tokens) {
 
 }
 
+
+// parse fragments
 void parseFragment(const string &str, vector<string> & tokens) {
 
    vector<string> queries = split(str, '?');
@@ -98,21 +100,27 @@ void parseFragment(const string &str, vector<string> & tokens) {
       if (part.find("+") != -1) {
          splitAdd(part, '+', tokens);
       }
-      if (part.find("-") != -1) {
+      else if (part.find("-") != -1) {
          splitAdd(part, '-', tokens);
       }
-      if (part.find("_") != -1) {
+      else if (part.find("_") != -1) {
          splitAdd(part, '_', tokens);
+      }
+      else {
+         string normalized = normalize(part);
+         if (normalized != "")
+            tokens.push_back(normalized);
       }
    }
 }
 
-
+// TODO: remove this if too slow
 // parse query parameters and push into tokens
 void parsePath(const string &path, vector<string> & tokens) {
-   // parse queries
-   vector<string> pairs = split(path, '&');
-   if (!pairs.empty()) {
+   // parse path
+   vector<string> pairs = split(path, '&'); // whether there are queries
+   if (pairs.size() > 1) {
+      // query type
       for (const string &pair : pairs) {
          vector<string> kv = split(pair, '=');
          for (const string &part : kv) {
@@ -127,7 +135,7 @@ void parsePath(const string &path, vector<string> & tokens) {
 }
 
 
-// Function to tokenize a URL
+// tokenize a URL
 vector<string> tokenizeUrl(const string &url) {
    vector<string> tokens;
 
@@ -151,9 +159,9 @@ vector<string> tokenizeUrl(const string &url) {
       processDomain(parts[0], tokens);
    }
 
-
    // the rest of the path
    for (size_t i = 1; i < parts.size(); ++i) {
+      // std::cout << "path: " << parts[i] << std::endl ;
       parsePath(parts[i], tokens);
    }
 
@@ -161,8 +169,31 @@ vector<string> tokenizeUrl(const string &url) {
 }
 
 
+// find match in url
+
+// count number of query matches in url
+int matchCount(const vector<string> &tokens, const string &url) {
+   vector<string> urlTokens = tokenizeUrl(url);
+   std::cout << "url tokens: ";
+   for (int j = 0; j < urlTokens.size(); j ++) {
+      std::cout << urlTokens[j] <<  " ";
+   }
+   std::cout << "query tokens: " << tokens.size() << std::endl;;
+   int count = 0;
+   for (int i = 0; i < tokens.size(); i ++) {
+      for (int j = 0; j < urlTokens.size(); j ++) {
+         if (tokens[i] == urlTokens[j]) {
+            count ++;
+         }
+      }
+   }
+
+   return count;
+}
+
+
 // int main() {
-//    string url = "https://en.wikipedia.org/wiki/Botanical_garden#:~:text=A%20botanical%20garden%20is%20a,essential%20to%20its%20particular%20undertakings.";
+//    string url = "https://www.niche.com/colleges/search/best-colleges/s/michigan/";
 
 //    vector<string> tokens = tokenizeUrl(url);
 
@@ -171,7 +202,7 @@ vector<string> tokenizeUrl(const string &url) {
 //    }
 // }
 
-// match queries
+// match queries (remove stop words)
 
 
 // score 
