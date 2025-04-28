@@ -41,17 +41,13 @@ public:
       size_t num_docs = doc_features.size();
       size_t num_features = doc_features[0].size();
 
-      // Create input tensor
-      vector<int64_t> input_shape = {static_cast<int64_t>(batch_size), 
-                                       static_cast<int64_t>(num_docs), 
-                                       static_cast<int64_t>(num_features)};
+      vector<int64_t> input_shape;
+      input_shape.push_back(static_cast<int64_t>(batch_size));
+      input_shape.push_back(static_cast<int64_t>(num_docs));
+      input_shape.push_back(static_cast<int64_t>(num_features));
       
       // Flatten the input data
-      // vector<float> input_data;
-      // for (const auto& doc : doc_features) {
-      //    input_data.insert(input_data.end(), doc.begin(), doc.end());
-      // }
-      std::vector<float> input_data;
+      vector<float> input_data;
       for (const auto& doc : doc_features) {
          for (const auto& feature : doc) {
             input_data.push_back(feature);
@@ -75,9 +71,7 @@ public:
       size_t output_size = output_tensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
       
       // Convert output to vector
-      // vector<float> predictions(output_data, output_data + output_size);
-
-      std::vector<float> predictions; 
+      vector<float> predictions; 
       predictions.reserve(output_size);
 
       for (size_t i = 0; i < output_size; ++i) {
