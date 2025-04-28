@@ -50,7 +50,7 @@ void Ranker::rarestWord( )
    
 
    endDoc->Seek(docBegin);
-   std::cout << "rarest: " << rarest << ", occurrence: " << rarestOccurrences << std::endl;
+   //std::cout << "rarest: " << rarest << ", occurrence: " << rarestOccurrences << std::endl;
    }   
 
 
@@ -110,11 +110,11 @@ void Ranker::forward( )
             nearestLocation = spanLocations[ i ];  
          if ( spanLocations[ i ] > farthestLocation )
             farthestLocation = spanLocations[ i ];  
-         std::cout << spanLocations[i] << " ";
+         //std::cout << spanLocations[i] << " ";
          }
 
-      std::cout << std::endl;
-      std::cout << "farthest loc: " << farthestLocation << ", nearest loc: " << nearestLocation << std::endl;
+      //std::cout << std::endl;
+      //std::cout << "farthest loc: " << farthestLocation << ", nearest loc: " << nearestLocation << std::endl;
 
       // calculate heuristics
       // if short span
@@ -173,7 +173,7 @@ int Ranker::rankingScore( )
    {
    rarestWord( );  
    forward( );  
-   std::cout << "short span: " << numShortSpan << " , in order span: " << numInOrderSpan << " , exact phrase: " << numExactPhrase << " , top span: " << numTopSpan << " , most word freq: " << numMostWordFreq << "\n";
+   //std::cout << "short span: " << numShortSpan << " , in order span: " << numInOrderSpan << " , exact phrase: " << numExactPhrase << " , top span: " << numTopSpan << " , most word freq: " << numMostWordFreq << "\n";
    
    return dynamicScore( );  
    }
