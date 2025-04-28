@@ -2,6 +2,7 @@
 #include "driver.h"
 #include "matchUrl.h"
 #include "model.h"
+#include <ctime> // For clock()
 
 // TODO: can we use unordered_map; BUG: map will give duplicates more scores
 
@@ -29,7 +30,7 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & inpu
    std::cout << "input: " << input << std::endl;
    size_t target = 0;
 
-   while (isr->Seek(target) != nullptr) {
+   while (isr->Seek(target) != nullptr && !shutdown) {
 
       //std::cout << "matching doc: " << isr ->GetMatchingDoc() << " " << parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
       const char * docString = parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str();
@@ -120,19 +121,24 @@ void* Driver::searchChunk(void *args) {
    const char* fname = searchArgs->fname.c_str();
    string input = searchArgs->input;
 
+
    // MAKE SURE THIS GETS CLEANED UP!
    IndexReadHandler readHandler = IndexReadHandler();
    readHandler.ReadIndex(fname);
    ISRHandler handler;
-   handler.SetIndexReadHandlerPtr(&readHandler);
+   handler.SetIndexReadHandler(&readHandler);
+
 
    QueryParser parser(input, 'b');
    parser.SetIndexReadHandler(fname);
    getRankScoreQueryCompiler(parser, input, 'b');
+   
+   
 
-   QueryParser parserTitle(input, 't');
-   parserTitle.SetIndexReadHandler(fname);
-   getRankScoreQueryCompiler(parserTitle, input, 't');
+   // QueryParser parserTitle(input, 't');
+   // if (parserTitle.SetIndexReadHandler(fname) == 0) {
+   //    getRankScoreQueryCompiler(parserTitle, input, 't');
+   // }
    
    return nullptr;
 }
@@ -170,14 +176,17 @@ string getResults( string searchString ) {
       threads.push_back(thread);
       ++i;
    }
-   for (pthread_t &thread : threads) {
-      pthread_join(thread, nullptr);
-   }
+   sleep(15);
+   for (auto &driver : drivers)
+      driver.shutdownDriver();
+   for (pthread_t &thread : threads)
+      pthread_join(thread, 0);
 
    // sort top 50 results
    vector<Result> sorted_results;
    std::unordered_set<size_t> duplicates;
    for (auto &d : drivers) {
+      WithWriteLock wl(d.writerLock);
       for (const auto& pair : d.results_map) {
          if (duplicates.find(pair.first) == duplicates.end()) {
             // sorted_results.push_back({pair.second.score, pair.second.url});
@@ -202,24 +211,29 @@ string getResults( string searchString ) {
    }
 
    // run model
-   // vector<Result> top10Urls = runModel(top50Urls);
+   // Record start time
+   clock_t start = clock();
+   vector<Result> top10Urls = runModel(top50Urls);
+   clock_t end = clock();
+   // Calculate elapsed time
+   double elapsed_time = double(end - start) / CLOCKS_PER_SEC;
+   std::cout << "Time taken: " << elapsed_time << " seconds" << std::endl;
+
 
    // Extract the top 10 URLs
    string buf;
-   for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i)
-      buf += sorted_results[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
+   // for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i)
+   //    buf += sorted_results[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
 
-   // for (size_t i = 0; i < std::min(static_cast<size_t>(10), top10Urls.size()); ++i)
-   //    buf += top10Urls[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
+   for (size_t i = 0; i < std::min(static_cast<size_t>(10), top10Urls.size()); ++i)
+      buf += top10Urls[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
 
    return buf;
-
-
 }
 
 
 int main() {
-   string query = "shanghai";
+   string query = "university of michigan";
    string results = getResults(query);
 
    std::cout << results << std::endl;

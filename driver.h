@@ -17,6 +17,7 @@
 #include <ostream>
 #include <stdio.h>
 #include <pthread.h>
+#include <signal.h>
 #include "matchUrl.h"
 
 const uint8_t NUM_DRIVERS = 128;
@@ -75,11 +76,17 @@ public:
          num ++;
    }
 
-private:
-   void getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type); // TODO: remove input when query compiler fixed
-
    ReaderWriterLock writerLock;
 
+   void shutdownDriver() {
+      WithWriteLock wl (writerLock);
+      shutdown = true;
+   }
+
+private:
+   void getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type); // TODO: remove input when query compiler fixed
+   
+   bool shutdown = false;
 };
 
 
