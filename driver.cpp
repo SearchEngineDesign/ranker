@@ -124,7 +124,7 @@ void* Driver::searchChunk(void *args) {
    IndexReadHandler readHandler = IndexReadHandler();
    readHandler.ReadIndex(fname);
    ISRHandler handler;
-   handler.SetIndexReadHandler(&readHandler);
+   handler.SetIndexReadHandlerPtr(&readHandler);
 
    QueryParser parser(input, 'b');
    parser.SetIndexReadHandler(fname);

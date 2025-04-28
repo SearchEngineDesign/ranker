@@ -1,12 +1,13 @@
 #pragma once
-#include <onnxruntime_cxx_api.h>
+#include "onnx/onnxruntime-linux-x64-gpu-1.21.1/include/onnxruntime_cxx_api.h"
 #include <cf/searchstring.h>
 #include <cf/vec.h>
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <nlohmann/json.hpp>
+#include <json.hpp>
 #include <algorithm>
+#include "driver.h"
 
 using json = nlohmann::json;
 
@@ -72,7 +73,7 @@ public:
       return predictions;
    }
 
-   vector<string> getTop10(const vector<float>& scores, vector<Result> & top50Results) {
+   vector<Result> getTop10(const vector<float>& scores, vector<Result> & top50Results) {
       // Create vector of indices
       vector<int> indices(scores.size());
       for (size_t i = 0; i < scores.size(); ++i) {
