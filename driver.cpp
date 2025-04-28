@@ -202,15 +202,15 @@ string getResults( string searchString ) {
    }
 
    // run model
-   vector<Result> top10Urls = runModel(top50Urls);
+   // vector<Result> top10Urls = runModel(top50Urls);
 
    // Extract the top 10 URLs
    string buf;
-   // for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i)
-   //    buf += sorted_results[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
+   for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i)
+      buf += sorted_results[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
 
-   for (size_t i = 0; i < std::min(static_cast<size_t>(10), top10Urls.size()); ++i)
-      buf += top10Urls[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
+   // for (size_t i = 0; i < std::min(static_cast<size_t>(10), top10Urls.size()); ++i)
+   //    buf += top10Urls[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
 
    return buf;
 
@@ -218,10 +218,10 @@ string getResults( string searchString ) {
 }
 
 
-// int main() {
-//    string query = "1737";
-//    string results = getResults(query);
+int main() {
+   string query = "shanghai";
+   string results = getResults(query);
 
-//    std::cout << results << std::endl;
+   std::cout << results << std::endl;
 
-// }
+}
