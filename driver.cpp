@@ -6,8 +6,11 @@
 
 
 void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type) {
-   if (checkStop())
+   writerLock.readLock();
+   if (checkStop()) {
+      writerLock.readUnlock();
       return;
+   }
    
    ISR *isr = parser.compile();
    if (isr == nullptr) {
@@ -207,10 +210,10 @@ string getResults( string searchString ) {
 }
 
 
-int main() {
-   string query = "university of michigan";
-   string results = getResults(query);
+// int main() {
+//    string query = "1737";
+//    string results = getResults(query);
 
-   std::cout << results << std::endl;
+//    std::cout << results << std::endl;
 
-}
+// }
