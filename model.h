@@ -1,15 +1,13 @@
 #pragma once
-#include "onnx/onnxruntime-linux-x64-gpu-1.21.1/include/onnxruntime_cxx_api.h"
+#include "onnxruntime-linux-x64-gpu-1.21.1/include/onnxruntime_cxx_api.h"
 #include <cf/searchstring.h>
 #include <cf/vec.h>
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <json.hpp>
 #include <algorithm>
 #include "driver.h"
 
-using json = nlohmann::json;
 
 class RankModel {
 private:
