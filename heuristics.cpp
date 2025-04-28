@@ -149,7 +149,7 @@ void Ranker::forward( )
 int Ranker::dynamicScore( )
    {
       int score = numShortSpan * shortSpanWeight + 
-      numInOrderSpan * inOrderSpanWeight + 
+      // numInOrderSpan * inOrderSpanWeight + 
       numExactPhrase * exactPhraseWeight + 
       numTopSpan * topSpanWeight + 
       numMostWordFreq * mostWordFreqWeight;  

@@ -53,7 +53,7 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & inpu
       }
       else if (type == 't') {
          flatten = parser.getFlattenedTitles();
-         weight = 5;
+         weight = 10;
       }
 
       // body words
@@ -79,7 +79,7 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & inpu
          docLength = ranker.getDocLength();
 
          // close end doc for ranker
-         parser.getISRHandler().CloseISREndDoc(endDoc);
+         // parser.getISRHandler().CloseISREndDoc(endDoc);
       }
 
       // match in URL
@@ -174,7 +174,7 @@ string getResults( string searchString ) {
       threads.push_back(thread);
       ++i;
    }
-   sleep(15);
+   sleep(5);
    for (auto &driver : drivers)
       driver.shutdownDriver();
    for (pthread_t &thread : threads)
