@@ -2,7 +2,6 @@
 #include "driver.h"
 #include "matchUrl.h"
 #include "model.h"
-#include <ctime> // For clock()
 
 // TODO: can we use unordered_map; BUG: map will give duplicates more scores
 
@@ -122,23 +121,22 @@ void* Driver::searchChunk(void *args) {
    string input = searchArgs->input;
 
 
-   // MAKE SURE THIS GETS CLEANED UP!
-   IndexReadHandler readHandler = IndexReadHandler();
-   readHandler.ReadIndex(fname);
-   ISRHandler handler;
-   handler.SetIndexReadHandler(&readHandler);
-
+   // // MAKE SURE THIS GETS CLEANED UP!
+   // IndexReadHandler readHandler = IndexReadHandler();
+   // readHandler.ReadIndex(fname);
+   // ISRHandler handler;
+   // handler.SetIndexReadHandler(&readHandler);
 
    QueryParser parser(input, 'b');
-   parser.SetIndexReadHandler(fname);
-   getRankScoreQueryCompiler(parser, input, 'b');
-   
+   if (parser.SetIndexReadHandler(fname) == 0) {
+      getRankScoreQueryCompiler(parser, input, 'b');
+   }
    
 
-   // QueryParser parserTitle(input, 't');
-   // if (parserTitle.SetIndexReadHandler(fname) == 0) {
-   //    getRankScoreQueryCompiler(parserTitle, input, 't');
-   // }
+   QueryParser parserTitle(input, 't');
+   if (parserTitle.SetIndexReadHandler(fname) == 0) {
+      getRankScoreQueryCompiler(parserTitle, input, 't');
+   }
    
    return nullptr;
 }
@@ -210,21 +208,10 @@ string getResults( string searchString ) {
       std::cout << "score: " << top50Urls[i].score << std::endl;
    }
 
-   // run model
-   // Record start time
-   clock_t start = clock();
    vector<Result> top10Urls = runModel(top50Urls);
-   clock_t end = clock();
-   // Calculate elapsed time
-   double elapsed_time = double(end - start) / CLOCKS_PER_SEC;
-   std::cout << "Time taken: " << elapsed_time << " seconds" << std::endl;
-
 
    // Extract the top 10 URLs
    string buf;
-   // for (size_t i = 0; i < std::min(static_cast<size_t>(10), sorted_results.size()); ++i)
-   //    buf += sorted_results[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
-
    for (size_t i = 0; i < std::min(static_cast<size_t>(10), top10Urls.size()); ++i)
       buf += top10Urls[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
 
@@ -232,10 +219,10 @@ string getResults( string searchString ) {
 }
 
 
-int main() {
-   string query = "university of michigan";
-   string results = getResults(query);
+// int main() {
+//    string query = "university of michigan";
+//    string results = getResults(query);
 
-   std::cout << results << std::endl;
+//    std::cout << results << std::endl;
 
-}
+// }
