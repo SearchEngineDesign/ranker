@@ -47,9 +47,15 @@ public:
                                        static_cast<int64_t>(num_features)};
       
       // Flatten the input data
-      vector<float> input_data;
+      // vector<float> input_data;
+      // for (const auto& doc : doc_features) {
+      //    input_data.insert(input_data.end(), doc.begin(), doc.end());
+      // }
+      std::vector<float> input_data;
       for (const auto& doc : doc_features) {
-         input_data.insert(input_data.end(), doc.begin(), doc.end());
+         for (const auto& feature : doc) {
+            input_data.push_back(feature);
+         }
       }
 
       // Create input tensor
@@ -69,7 +75,14 @@ public:
       size_t output_size = output_tensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
       
       // Convert output to vector
-      vector<float> predictions(output_data, output_data + output_size);
+      // vector<float> predictions(output_data, output_data + output_size);
+
+      std::vector<float> predictions; 
+      predictions.reserve(output_size);
+
+      for (size_t i = 0; i < output_size; ++i) {
+         predictions.push_back(output_data[i]);
+      }
       return predictions;
    }
 
@@ -85,9 +98,9 @@ public:
                [&scores](int a, int b) { return scores[a] > scores[b]; });
 
       // Get the top 10 URLs
-      vector<string> top10Urls;
+      vector<Result> top10Urls;
       for (int i = 0; i < 10 && i < static_cast<int>(indices.size()); ++i) {
-         top10Urls.push_back(top50Results[indices[i]].url);
+         top10Urls.push_back(top50Results[indices[i]]);
       }
 
       return top10Urls;
