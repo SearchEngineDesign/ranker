@@ -1,17 +1,21 @@
 #pragma once
 
-#include "../utils/searchstring.h"
-#include "../utils/vector.h"
+#include <cf/searchstring.h>
+#include <cf/vec.h>
+// #include "../include/cf/searchstring.h"
+// #include "../include/cf/vec.h"
 #include "heuristics.h"
 #include "../isr/isr.h"
 #include "../index/index.h"
 #include "../isr/isrHandler.h"
 #include <unordered_map>
+#include <unordered_set>
 #include "../queryCompiler/compiler.h"
 #include <filesystem>
 #include <cstddef>
 #include "../frontier/ReaderWriterLock.h"
 #include <ostream>
+#include <stdio.h>
 #include <pthread.h>
 #include "matchUrl.h"
 
@@ -43,7 +47,8 @@ struct Result {
    }
 };
 
-vector<Result> getResults( string searchString ); // TODO: change back to string
+
+string getResults( string searchString );
 
 class Driver {
 public:

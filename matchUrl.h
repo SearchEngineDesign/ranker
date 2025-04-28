@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../utils/searchstring.h"
-#include "../utils/vector.h"
+#include <cf/searchstring.h>
+#include <cf/vec.h>
 
 // normalize tokens (convert to lowercase and remove non-alphanumeric characters)
 string normalize(const string &token);
