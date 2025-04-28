@@ -119,19 +119,15 @@ void* Driver::searchChunk(void *args) {
    const char* fname = searchArgs->fname.c_str();
    string input = searchArgs->input;
 
-   // MAKE SURE THIS GETS CLEANED UP!
-   IndexReadHandler readHandler = IndexReadHandler();
-   readHandler.ReadIndex(fname);
-   ISRHandler handler;
-   handler.SetIndexReadHandler(&readHandler);
-
    QueryParser parser(input, 'b');
-   parser.SetIndexReadHandler(fname);
-   getRankScoreQueryCompiler(parser, input, 'b');
+   if (parser.SetIndexReadHandler(fname) == 0) {
+      getRankScoreQueryCompiler(parser, input, 'b');
+   }
+   
 
-   QueryParser parserTitle(input, 't');
+   /*QueryParser parserTitle(input, 't');
    parserTitle.SetIndexReadHandler(fname);
-   getRankScoreQueryCompiler(parserTitle, input, 't');
+   getRankScoreQueryCompiler(parserTitle, input, 't');*/
    
    return nullptr;
 }
@@ -169,14 +165,16 @@ string getResults( string searchString ) {
       threads.push_back(thread);
       ++i;
    }
+   sleep(10);
    for (pthread_t &thread : threads) {
-      pthread_join(thread, nullptr);
+      pthread_kill(thread, 0);
    }
 
    // sort top 50 results
    vector<Result> sorted_results;
    std::unordered_set<size_t> duplicates;
    for (auto &d : drivers) {
+      WithWriteLock wl(d.writerLock);
       for (const auto& pair : d.results_map) {
          if (duplicates.find(pair.first) == duplicates.end()) {
             // sorted_results.push_back({pair.second.score, pair.second.url});
@@ -208,8 +206,6 @@ string getResults( string searchString ) {
       buf += sorted_results[i].url + "\t" + string(std::to_string(sorted_results[i].score).c_str()) + "\n";
 
    return buf;
-
-
 }
 
 
