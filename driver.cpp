@@ -28,7 +28,7 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & inpu
    std::cout << "input: " << input << std::endl;
    size_t target = 0;
 
-   while (isr->Seek(target) != nullptr) {
+   while (isr->Seek(target) != nullptr && !shutdown) {
 
       //std::cout << "matching doc: " << isr ->GetMatchingDoc() << " " << parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str() << std::endl;
       const char * docString = parser.getIndexReadHandler().getDocument(isr ->GetMatchingDoc())->c_str();
@@ -125,9 +125,10 @@ void* Driver::searchChunk(void *args) {
    }
    
 
-   /*QueryParser parserTitle(input, 't');
-   parserTitle.SetIndexReadHandler(fname);
-   getRankScoreQueryCompiler(parserTitle, input, 't');*/
+   QueryParser parserTitle(input, 't');
+   if (parserTitle.SetIndexReadHandler(fname) == 0) {
+      getRankScoreQueryCompiler(parserTitle, input, 't');
+   }
    
    return nullptr;
 }
@@ -165,10 +166,11 @@ string getResults( string searchString ) {
       threads.push_back(thread);
       ++i;
    }
-   sleep(10);
-   for (pthread_t &thread : threads) {
-      pthread_kill(thread, 0);
-   }
+   sleep(15);
+   for (auto &driver : drivers)
+      driver.shutdownDriver();
+   for (pthread_t &thread : threads)
+      pthread_join(thread, 0);
 
    // sort top 50 results
    vector<Result> sorted_results;

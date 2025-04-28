@@ -77,10 +77,16 @@ public:
    }
 
    ReaderWriterLock writerLock;
+
+   void shutdownDriver() {
+      WithWriteLock wl (writerLock);
+      shutdown = true;
+   }
+
 private:
    void getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type); // TODO: remove input when query compiler fixed
    
-
+   bool shutdown = false;
 };
 
 
