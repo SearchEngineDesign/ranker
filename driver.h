@@ -60,6 +60,21 @@ public:
    void* searchChunk(void *args);
    std::unordered_map<size_t, Result> results_map;
 
+   int num = 0;
+
+   const static int GoodNum = 100, GoodScore = 50;
+
+   bool checkStop() {
+      if (num >= GoodNum)
+         return true;
+      return false;
+   }
+
+   void addGoodDocNum(int score) {
+      if (score >= GoodScore)
+         num ++;
+   }
+
 private:
    void getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type); // TODO: remove input when query compiler fixed
 

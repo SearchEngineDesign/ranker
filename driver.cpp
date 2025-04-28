@@ -6,6 +6,9 @@
 
 
 void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & input, char type) {
+   if (checkStop())
+      return;
+   
    ISR *isr = parser.compile();
    if (isr == nullptr) {
       std::cout << "isr nullptr\n";
@@ -80,6 +83,8 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & inpu
       // for dataset
 
       WithWriteLock withWriteLock(writerLock);
+      addGoodDocNum(score);
+
       // results_map[hashbasic(docString)] = {score, docString};
       if (results_map.find(hashbasic(docString)) == results_map.end()) {
          results_map[hashbasic(docString)] = {score, docString, {numShortSpan, 0}, {numInOrderSpan, 0}, {numExactPhrase, 0}, {numTopSpan, 0}, {percentFreqWords, 0.0}, urlLength, docLength, matchNum};
@@ -202,10 +207,10 @@ string getResults( string searchString ) {
 }
 
 
-// int main() {
-//    string query = "university of michigan";
-//    string results = getResults(query);
+int main() {
+   string query = "university of michigan";
+   string results = getResults(query);
 
-//    std::cout << results << std::endl;
+   std::cout << results << std::endl;
 
-// }
+}
