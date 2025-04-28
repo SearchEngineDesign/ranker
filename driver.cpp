@@ -11,6 +11,9 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & inpu
       writerLock.readUnlock();
       return;
    }
+   writerLock.readUnlock();
+
+
    
    ISR *isr = parser.compile();
    if (isr == nullptr) {
