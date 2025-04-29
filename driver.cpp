@@ -83,6 +83,7 @@ void Driver::getRankScoreQueryCompiler(QueryParser & parser, const string & inpu
       }
 
       // match in URL
+      score += Ranker::urlScore(tokens, url);
       int matchNum = matchCount(tokens, url);
       int urlMatchWeight = 3;
       score += matchNum * urlMatchWeight;

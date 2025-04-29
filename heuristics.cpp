@@ -1,4 +1,5 @@
 #include "heuristics.h"
+#include <string>
 
 size_t Ranker::distance( Location loc1, Location loc2 )
    {
@@ -169,26 +170,22 @@ int Ranker::staticScore( )
    }
 
 
+int Ranker::urlScore(vector<string> &tokens, string &url) {
+   int weight = 0;
+   for (const auto& s : tokens)
+      if (url.contains(s.c_str()))
+         weight += 50;
+   return weight;
+}
+
 int Ranker::rankingScore( )
    {
    rarestWord( );  
    forward( );  
-   //std::cout << "short span: " << numShortSpan << " , in order span: " << numInOrderSpan << " , exact phrase: " << numExactPhrase << " , top span: " << numTopSpan << " , most word freq: " << numMostWordFreq << "\n";
    
    return dynamicScore( );  
    }
 
-
-vector<unsigned int> Ranker::getHeuristics( )
-   {
-   vector<unsigned int> results;  
-   results.push_back( numShortSpan );  
-   results.push_back( numInOrderSpan );  
-   results.push_back( numExactPhrase );  
-   results.push_back( numTopSpan );  
-   results.push_back( numMostWordFreq );  
-   return results;  
-   }
 
 
 unsigned int Ranker::getNumShortSpan() {

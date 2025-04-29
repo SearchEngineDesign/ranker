@@ -24,6 +24,8 @@ public:
    int staticScore( );  // calculate static score
    int dynamicScore( );  // calculate dynamic score; TODO: title, url, head, body
 
+   static int urlScore(vector<string> &tokens, string &url);  // determine occurences of token in url
+
    int rankingScore( );  // run functions and return the ranking score of the matching doc
 
    vector<unsigned int> getHeuristics( );
@@ -36,6 +38,7 @@ public:
    size_t getDocLength();
 
 private:
+
 
    ISRWord **words;  // flatten query words; TODO: seek to the beginning of the matching doc
    ISREndDoc *endDoc;  // endDoc pointing to the matching doc; TODO: seek to the matching doc
