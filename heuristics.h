@@ -60,7 +60,7 @@ private:
    // dynamic heuristic
    unsigned int numShortSpan = 0, numInOrderSpan = 0, numExactPhrase = 0, numTopSpan = 0, numMostWordFreq = 0;
    float percentWordFreq = 0.0;
-   int shortSpanWeight = 4, inOrderSpanWeight = 1, exactPhraseWeight = 5, topSpanWeight = 2, mostWordFreqWeight = 1;
+   int shortSpanWeight = 2, inOrderSpanWeight = 3, exactPhraseWeight = 5, topSpanWeight = 3, mostWordFreqWeight = 3;
 
    // static & dynamic weight
    int staticWeight = 0, dynamicWeight = 0;  
