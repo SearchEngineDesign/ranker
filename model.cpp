@@ -28,6 +28,10 @@ vector<vector<float>> constructData(vector<Result> & top50Results) {
 
 vector<Result> runModel(vector<Result> & top50Results) {
    try {
+      if (!top50Results.size()) {
+         vector<Result> out;
+         return out;
+      }
       // Initialize the model
       RankModel model("rank_model.onnx");
 
